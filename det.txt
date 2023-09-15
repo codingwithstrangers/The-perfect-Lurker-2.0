@@ -1,0 +1,63 @@
+What we want
+1. I want to make a twitch bot that monitors activer viewers, this bot will calulate to the hour how long each viewer is watching. to enter the race you must 
+use channel points 100 channelpoints. You can move up using items and lose spots with items. the goal is to travel the furthest (spend the most active
+time in chat)
+
+How you gonna do this
+- Twitch bot?
+- Python
+
+What do you need
+- twitch bot token
+
+Game play
+1. the user doesnt need to do anything but watch, every min they wil move 1 space a total of 60 spoaces (loop)
+2. they will get 3 boost that move them up 1 spot (ever bost cost 10 chats)(doesnt start recharing until all 3 are used up(can only be used 1 ever 30 chats)
+(chat message must not be spam))
+3.you can leave traps for people (if someone hits your trap they lose space equal to the cost of the trap)
+4. trap power and bosst power run on the same source of energy. So either you play defense or offences based on the length of time you are watching
+5. player actively watching will have color pix
+6. users who paid to play but are not active will be greyed out and zzz
+7. traps are hidden on screen (player can see their trap if possible)
+
+Visual things
+1. 7x7 px screen for player icon
+2. 10x10 px race track (1920*1080)
+(traps )
+
+client_id = comes from console on twitch developer it is called client id 
+twitch oauth = https://twitchapps.com/tmi/ is meaningless
+we need token to = mod token and user_token = author token
+access token is really your token and you get from access token from here = https://twitchtokengenerator.com/?code=5ufjtyqsgris4pl4f77ebzw4fq1lgp&scope=clips%3Aedit+bits%3Aread+chat%3Aread+chat%3Aedit+channel%3Aread%3Aredemptions&state=frontend%7COUtSUkxyQjBiaEN3TjFENWI0eDRVUT09
+
+Game time
+how to score points, pre rec need to use channel point,and watch stream
+
+Point system
+1. the user will get .5 point forevery 1 min they watch stream
+2. user can get bonus .5 point for following
+3. user will get bonus for subbing .5
+4.
+
+Losing points
+1. by landing on traps buying 500pts (boost makes you skip tile to avoid trap) 3 traps 1 space miniumium apart
+2. 
+
+
+PY Game
+What do we want to do 
+1. make a mini map
+2. put up to 15
+3. top 3 people get crowns accordingly
+4.the person not moving the most (wrf does this mean) get chain and ball
+5. traps on spaces flash red 
+6. animation for damage, speed, holding items and sleep
+
+How it works
+1. racers in csv will start at starting line and never go into negative
+2. 
+
+
+Version 2.0
+1. convert esclient to pubsub (no more webhook)
+2. make the bot listen only for specific channel point  
