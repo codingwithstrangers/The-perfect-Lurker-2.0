@@ -61,3 +61,15 @@ How it works
 Version 2.0
 1. convert esclient to pubsub (no more webhook)
 2. make the bot listen only for specific channel point  
+
+Map class
+in an effort to revamp the map we must add new ft.
+1. ditch old point system
+    why? points score move linear time and track are not
+2. new make map the source
+    - map will hold data which will effect player verse
+    - points, traps and location
+    why now we can see where a player is an track how close the next player is to them front and back 
+    we can also use time to move and track everyone for more data
+    homing attacks and blue shells can prack easier
+    

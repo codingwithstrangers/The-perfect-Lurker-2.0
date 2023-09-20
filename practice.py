@@ -13,9 +13,6 @@ from websockets.server import serve, WebSocketServerProtocol
 logging.basicConfig(level=logging.INFO) # Set this to DEBUG for more logging, INFO for regular logging
 logger = logging.getLogger("twitchio.http")
 
-#Global Variable
-racer_csv = "the_strangest_racer.csv"
-lurkers_points = 'lurker_points.csv' 
 
 #custom_id for channel points
 perfect_lurker_channel_id="a374b031-d275-4660-9755-9a9977e7f3ae"
@@ -83,9 +80,10 @@ class Lurker:
         self.item = item_none
 
         
-class LurkerGang:
+class LurkerGang:   
     def __init__(self):
         self._lurkers:Dict[str, Lurker] = {}
+        self.find_banana:Dict[int, Lurker] = {}
 
     def __getitem__(self, key:str)-> Optional[Lurker]:
         return self._lurkers.get(key)
@@ -95,7 +93,11 @@ class LurkerGang:
     
     def add(self, lurker: Lurker ):
         self._lurkers[lurker.user_name] = lurker
+
     
+    
+
+
     
 class Bot_one(commands.Bot):
     def __init__(self):
@@ -118,7 +120,7 @@ class Bot_one(commands.Bot):
             
         return new_lurker
         
-
+    #message for joining race
     async def lurker_joins_race(self, event: pubsub.PubSubChannelPointsMessage):
         chat_lurker = await self.create_or_get_lurker(event.user.name)
         channel = self.connected_channels[0]
@@ -128,7 +130,8 @@ class Bot_one(commands.Bot):
             self.message_queue.append(f'{lurker_join_race},{chat_lurker.user_name},{chat_lurker.image_url}')
         else:
             await channel.send(f'@{chat_lurker.user_name}, hey sorry you can only enter the race once per stream coding32Whatmybrother ') 
-     
+
+    #enter race and get set point  
     async def event_pubsub_channel_points(self, event: pubsub.PubSubChannelPointsMessage):
         pprint.pprint(event.reward) #rerun in terminal look for id
         
@@ -138,6 +141,30 @@ class Bot_one(commands.Bot):
             talking_channel_point  = await self.create_or_get_lurker(event.user.name)
             self.message_queue.append(f'{setting_lurker_points},{talking_channel_point.user_name},{talking_channel_point.points}')
             talking_channel_point.add_points(1)
+    
+    #item pick up and drop
+    async def use_banana(self, event: pubsub.PubSubChannelPointsMessage):
+        chat_lurker = await self.create_or_get_lurker(event.user.name)
+        channel = self.connected_channels[0]
+        track_lurker_banana = chat_lurker.points%60 
+        self.lurker_gang.find_banana[track_lurker_banana] = chat_lurker
+        if event.reward.id == 
+        
+        if event.reward.id =='put name of custom channel point here':
+            await channel.send(f'@{chat_lurker.user_name}, just set a TRAP!')
+            self.message_queue.append(f'{setting_lurker_points},{chat_lurker.user_name},{chat_lurker.points}, {chat_lurker.equip_item}, {chat_lurker.drop_item}')
+        
+
+    async def use_redshell(self, event: pubsub.PubSubChannelPointsMessage):
+        chat_lurker = await self.create_or_get_lurker(event.user.name)
+        channel = self.connected_channels[0]
+        redshell_victim = ''
+        
+        if event.reward.id =='put name of custom channel point here':
+            await channel.send(f'@{chat_lurker.user_name}, has his sight locked on!')
+            self.message_queue.append(f'{setting_lurker_points},{chat_lurker.user_name},{chat_lurker.points}, {chat_lurker.equip_item}, {chat_lurker.drop_item}')
+        
+
 
     #remove points for talking 
     async def event_message(self, message):
@@ -170,7 +197,6 @@ class Bot_one(commands.Bot):
         
     #Each event will have a situation that can be tested, this is how we get the websocket
     #connected
-    
     async def give_point_timer(self):
         print('timer ticket toc')
         with open(all_viewers, 'r') as file:

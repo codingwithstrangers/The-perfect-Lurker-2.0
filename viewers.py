@@ -26,7 +26,7 @@ stream = "https://www.twitch.tv/codingwithstrangers/chat"
 
 
 #loop my shit duration of bot 
-duration = 580
+duration = 900
 
 #this wipes file
 # with open ('lurker_points.csv', 'w') as file:
@@ -85,51 +85,8 @@ for i in range(duration):
          for name in all_viewers:
             file.write(f"{name}\n")
 
-    
-    # Reads and puts the perfect lurker into dict.
-    racer_info = {}
-    perfect_lurker = {}
-    with open(racer_csv, 'r') as file:
-        lines = csv.reader(file)
-        racer_info = {l[0]: {'score': l[1], 'url': l[2]} for l in lines}
-        perfect_lurker.update(racer_info)
-
-    # Reads csv with points and makes it into dict.
-    lurker_points = 'lurker_points.csv'
-    existing_racers = {}
-    with open(lurker_points, 'r') as file:
-        reader = csv.reader(file)
-        existing_racers = {l[0]: {'score': l[1], 'url': l[2]} for l in reader}
-    
-    # Step 3: Update existing racers with perfect lurker info
-    
-    keys_to_remove = []
-    for key in existing_racers:
-        if key not in perfect_lurker:
-            keys_to_remove.append(key)
-
-    for key in keys_to_remove:
-        existing_racers.pop(key)
-
-    # Update existing racers and perfect lurker
-    for key in perfect_lurker:
-        if key in existing_racers:
-            if key.lower() in all_viewers:
-                existing_racers[key]['score'] = str(int(existing_racers[key]['score']) + 1)
-        else:
-            if key.lower() in all_viewers:
-                perfect_lurker[key]['score'] = str(int(perfect_lurker[key]['score']) + 1)
-            existing_racers[key] = perfect_lurker[key]
-  
-    # Write the updated scores back to the CSV file
-    with open("lurker_points.csv", "w") as file:
-        for name in existing_racers.keys():
-            final_output = f"{name},{existing_racers[name]['score']},{existing_racers[name]['url']}"
-            file.write(final_output + '\n')
 
     print("Scores have been updated and written to the file.")
-
-
 
     time.sleep(60)
 # let print text info
