@@ -1,0 +1,16 @@
+The purpose of these notes is to help me when I am lost. We want to talk about a proccess then we want to find the code that will let me do What I said
+we will need to make sure a process follow has the ability
+- to meet our current class system
+- accounts for current and future sysytem
+
+the code needs to emulate past sytem you should have some example in your code
+- take more comments if you need it
+- psdue code first them the real thing.
+- ask questions 
+
+
+1. how do we add lurkers to race:
+-we setup the class Lurker:
+What does the lurker class do?
+- it has an init that has (I think 3 types) types self, str, image str(self, user_name and image_url). It has 7 methods and they all do differnet thing (duh)
+    - 

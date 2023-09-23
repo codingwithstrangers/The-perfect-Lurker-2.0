@@ -18,6 +18,7 @@ logger = logging.getLogger("twitchio.http")
 perfect_lurker_channel_id="a374b031-d275-4660-9755-9a9977e7f3ae"
 talking_lurker_id="d229fa01-0b61-46e7-9c3c-a1110a7d03d4"
 all_viewers ="All_Viewers.txt"
+yellow_channel_point = ''
 
 #index of event types
 setting_lurker_points = 1
@@ -42,6 +43,7 @@ item_none = "none"
 item_shield = "shield"
 item_trap = "trap"
 
+#this isnt the gather this is the player (object oriented design)
 class Lurker:
     def __init__(self, user_name: str, image_url: str):
         self.image_url = image_url
@@ -65,14 +67,15 @@ class Lurker:
             return True
         return False
 
-
+    #gets point and sets points
     def add_points(self, delta: int)-> bool:
         if self.race_status != status_in_race:
             return False
         print(f"adding {delta} point(s) to {self.user_name}")   
         self.points = max(self.points +delta, 0)
         return True 
-
+    
+    #shield equip
     def equip_item(self, new_item: str):
         self.item = new_item
     
@@ -93,10 +96,6 @@ class LurkerGang:
     
     def add(self, lurker: Lurker ):
         self._lurkers[lurker.user_name] = lurker
-
-    
-    
-
 
     
 class Bot_one(commands.Bot):
@@ -147,13 +146,11 @@ class Bot_one(commands.Bot):
         chat_lurker = await self.create_or_get_lurker(event.user.name)
         channel = self.connected_channels[0]
         track_lurker_banana = chat_lurker.points%60 
-        self.lurker_gang.find_banana[track_lurker_banana] = chat_lurker
-        if event.reward.id == 
-        
-        if event.reward.id =='put name of custom channel point here':
+        if event.reward.id == yellow_channel_point:
+            self.lurker_gang.find_banana[track_lurker_banana] = chat_lurker
             await channel.send(f'@{chat_lurker.user_name}, just set a TRAP!')
-            self.message_queue.append(f'{setting_lurker_points},{chat_lurker.user_name},{chat_lurker.points}, {chat_lurker.equip_item}, {chat_lurker.drop_item}')
-        
+            self.message_queue.append(f'{chat_lurker.user_name},{chat_lurker.points}, {chat_lurker.equip_item}, {chat_lurker.drop_item}')
+
 
     async def use_redshell(self, event: pubsub.PubSubChannelPointsMessage):
         chat_lurker = await self.create_or_get_lurker(event.user.name)
