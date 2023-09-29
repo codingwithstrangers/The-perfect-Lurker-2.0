@@ -1,5 +1,5 @@
 import pprint
-from typing import Callable, List, Optional, Dict, Tuple
+from typing import Callable, List, Optional, Dict, Set, Tuple
 from twitchio.ext import pubsub, commands, routines
 from configuration import *
 import logging
@@ -121,18 +121,18 @@ class LurkerGang:
         self.yellow_items[(lurker.points+59)%60] = lurker
 
     def find_hit_lurkers(self) -> Tuple[List[int], List[Lurker]]:
-        hit_items:List[int] = []
+        hit_items:Set[int] = set()
         hit_lurkers:List[Lurker] = []
 
         for lurker in self._lurkers.values():
             if lurker.position in self.yellow_items:
-                hit_items.append(lurker.position)
+                hit_items.add(lurker.position)
                 hit_lurkers.append(lurker)
 
         for hit_item in hit_items:
             del self.yellow_items[hit_item]
 
-        return (hit_items, hit_lurkers)
+        return (list(hit_items), hit_lurkers)
         
     # def use_reditem(self, user_name: str, event_id: str):
         # item_position = self._lurkers[user_name].points%60.0
