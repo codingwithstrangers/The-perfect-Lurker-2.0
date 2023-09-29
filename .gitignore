@@ -5,4 +5,3 @@ __pycache__/
 Client Secret.txt
 ngrok.yml
 webhook.py
-venv/

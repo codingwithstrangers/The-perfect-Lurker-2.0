@@ -89,6 +89,10 @@ class Lurker:
     def position(self) -> int:
         return self.points % 60
 
+    @property
+    def in_race(self) -> bool:
+        return self.race_status == status_in_race
+
     def set_shield(self, value: int):
         self.shield_points = value
 
@@ -119,6 +123,7 @@ class LurkerGang:
     def drop_yellow_item(self, lurker: Lurker):
         # drop our banana behind us, like normal
         self.yellow_items[(lurker.points+59)%60] = lurker
+        print(f'adding a banana at {(lurker.points+59)%60}')
 
     def find_hit_lurkers(self) -> Tuple[List[int], List[Lurker]]:
         hit_items:Set[int] = set()
@@ -252,14 +257,24 @@ class Bot_one(commands.Bot):
         if event.user.name is None:
             return
 
-        chat_lurker = await self.create_or_get_lurker(event.user.name)
-        self.lurker_gang.drop_yellow_item(chat_lurker)
-
         channel = self.connected_channels[0]
+
+        chat_lurker = await self.create_or_get_lurker(event.user.name)
+        if not chat_lurker.in_race:
+            await channel.send(f'@{event.user.name}, you are not in the race')
+            return
+
+        self.lurker_gang.drop_yellow_item(chat_lurker)
         await channel.send(f'@{event.user.name}, dropped a yellow item')
-        self.message_queue.append(f'{yellow_banana_drop},{event.user.name}')
+        self.message_queue.append(f'{yellow_banana_drop},{event.user.name},{chat_lurker.position}')
+        await self.check_yellow_items()
 
     async def check_yellow_items(self):
+        # this may run before we connect, so just check we have a channel first
+        if len(self.connected_channels) == 0:
+            return
+
+        print('checking yellow items')
         channel = self.connected_channels[0]
 
         check = self.lurker_gang.find_hit_lurkers()
@@ -350,10 +365,10 @@ class Bot_one(commands.Bot):
             return
 
         talking_lurker = await self.create_or_get_lurker(message.author.name)
-        talking_lurker.add_points(-1)
-        await self.handle_commands(message)
-        self.message_queue.append(f'{setting_lurker_points},{talking_lurker.user_name},{talking_lurker.points}')
-        await self.check_yellow_items()
+        if talking_lurker.add_points(-1):
+            await self.handle_commands(message)
+            self.message_queue.append(f'{setting_lurker_points},{talking_lurker.user_name},{talking_lurker.points}')
+            await self.check_yellow_items()
 
     @commands.command()
     async def remove(self, ctx: commands.Context):
@@ -381,16 +396,15 @@ class Bot_one(commands.Bot):
         with open(all_viewers, 'r') as file:
             lines = {name.strip() for name in file}
             
-            #I want to give everyone who is in lurkergang
-            # a point if they are in all_viewers and
-            #  they have in race status
+        #I want to give everyone who is in lurkergang
+        # a point if they are in all_viewers and
+        # they have in race status
         for lurker in self.lurker_gang: 
             if lurker.user_name in lines:
                 if lurker.add_points(+1):
                     self.message_queue.append(f'{setting_lurker_points},{lurker.user_name},{lurker.points}')
 
         await self.check_yellow_items()
-
         print("this is the end of the tic tok")
 
     async def register(self,websocket):
@@ -424,7 +438,7 @@ class Bot_one(commands.Bot):
     
         
 bot = Bot_one()
-routines.routine(seconds=60)(bot.give_point_timer).start()
+routines.routine(seconds=10)(bot.give_point_timer).start()
 lurker_task_made = bot.loop.create_task(bot.run())
 task_for_botgodot = bot.loop.create_task(bot.pytogodot())
 gather_both_task = asyncio.gather(lurker_task_made,task_for_botgodot)
