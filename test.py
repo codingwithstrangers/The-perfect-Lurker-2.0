@@ -27,6 +27,8 @@ shield_chanel_point = ''
 
 #type of attacks
 yellow_attack = "banana"
+red_attack = "red_shell"
+blue_attack = "blue_shell"
 
 #index of event types
 setting_lurker_points = 1
@@ -39,8 +41,8 @@ blue_shell_drop = 7
 blue_shell_shield = 8
 lurker_join_race = 9
 lurker_left_race = 10
-shield_start = 11
-shield_stop = 12
+shield_on = 11
+shield_off = 12
 
 
 #class global variables for Lurker
@@ -94,7 +96,12 @@ class Lurker:
 class LurkerGang:   
     def __init__(self):
         self._lurkers:Dict[str, Lurker] = {}
-        self.find_item= {}
+        self.find_yellow_item= {}
+        self.find_red_item= {}
+        self.find_blue_item={}
+        self.lurker_position = {}
+        self.lurkers_with_shield={}
+        self.shield_health={}
 
     def __getitem__(self, key:str)-> Optional[Lurker]:
         return self._lurkers.get(key)
@@ -104,30 +111,142 @@ class LurkerGang:
     
     def add(self, lurker: Lurker ):
         self._lurkers[lurker.user_name] = lurker
+
+    # position of all lurkers
+    def lurker_place(self, user_name: str):
+        for lurker in self._lurkers.values():
+            randomlurker = lurker
+            current_lurker_position = randomlurker.points%60.0
+            place_value = len(self.lurker_position)+1
+            self.lurker_position[user_name] = (user_name, place_value, current_lurker_position)
+            sorted_lurker_positon = dict(sorted(self.lurker_position.items(), key=lambda x: x[1][2], reverse=True))
+            return sorted_lurker_positon
+        
+     # Get a sorted list of users based on their points in descending order
+    def get_sorted_users(self):
+        sorted_users = sorted(self._lurkers.keys(), key=lambda x: self._lurkers[x].points, reverse=True)
+        return sorted_users
+
+    # Assign places to users based on their points
+    def assign_places(self):
+        sorted_users = self.get_sorted_users()
+        for place, user_name in enumerate(sorted_users, start=1):
+            self.lurker_position[user_name] = (user_name, place, self._lurkers[user_name].points)
+
+    def use_shied(self, user_name: str, event_id: str):
+        shield_position= self._lurkers[user_name].points%60.0
+        if event_id == shield_chanel_point:
+            self.lurkers_with_shield[shield_position] = {'sheild_status':shield_on, 'hit_points':3}
+            lurker_message = (f'@{user_name}, is blocking all the hatters!!!')
+            godot_message = (f'{user_name},{shield_on}')
+            shielded_lurker = user_name
+            return lurker_message, godot_message, shielded_lurker
+        
+    def hit_shield (self, user_name: str):
+        if user_name in self.lurkers_with_shield:
+            self.lurkers_with_shield[user_name]['hit_point'] -=1
+            if self.lurkers_with_shield[user_name]['hit_point'] <=0:
+                del self.lurkers_with_shield[user_name]
+        return True
+
     
      #item pick up and drop
-    def use_item (self, user_name: str, event_id: str):
+    def use_yellowitem (self, user_name: str, event_id: str):
         item_position = self._lurkers[user_name].points%60.0
         if event_id == yellow_channel_point:
-            self.find_item[item_position] = (yellow_attack, user_name)
+            self.find_yellow_item[item_position] = (yellow_attack, user_name)
             lurker_message = (f'@{user_name}, just set a TRAP!!')
             godot_message = (f'{user_name}')
-            return lurker_message, godot_message
-
-        elif event_id == red_chanel_point:
-            pass
-        elif event_id == blue_chanel_point: 
-            pass
-        else:
-            print('this shit didnt work for the banana')
-            return  None
+            attacking_lurker = user_name
+            return lurker_message, godot_message, attacking_lurker, yellow_attack
         
+    def use_reditem (self, user_name: str, event_id: str):
+        item_position = self._lurkers[user_name].points%60.0
+        if event_id == red_chanel_point:
+            self.find_red_item[item_position] = (red_attack, user_name)
+            if user_name in self.lurker_position:
+                red_attacking_lurker_position = self.lurker_position[user_name][1]
+                red_lurker_name=self.lurker_position[user_name]
+                if red_attacking_lurker_position > 1:
+                    lurker_infront = list(self.lurker_position.values())[red_attacking_lurker_position-2]
+                    lurker_message = (f'@{user_name}, IS LOCKED ON {lurker_infront[user_name]}')
+                    godot_message = (f'{user_name}')
+
+                    return red_lurker_name, lurker_infront, item_position, None
+                else:
+                    nodody_is_infront= self.lurker_position[user_name], None
+                    return nodody_is_infront
+                
+            else:
+                return None
+            
+    def use_blueitem (self, user_name: str, event_id: str):
+        item_position = self._lurkers[user_name].points%60.0
+        if event_id == blue_chanel_point:
+            self.find_item[item_position] = (blue_attack, user_name)
+            if user_name in self.lurker_position:
+                blue_attacking_lurker_position = self.lurker_position[user_name][1]
+                blue_lurker_name=self.lurker_position[user_name]
+                if blue_attacking_lurker_position > 1:
+                    lurkers_in_front = list(self.lurker_position.values())[:blue_attacking_lurker_position - 1]
+                    num_users_to_select = max(1, int(0.3 * len(lurkers_in_front))) 
+                    # Always include the person in front
+                    first_lurker = [lurkers_in_front[0][0]]
+
+                    # Randomly select additional users
+                    random_lurkers = random.sample([lurker[0] for lurker in lurkers_in_front[1:]], num_users_to_select - 1)
+
+                    # Shuffle the list of random lurkers
+                    random.shuffle(random_lurkers)
+
+                    # Combine all lurkers into a single list
+                    all_lurkers = first_lurker + random_lurkers
+
+                    lurker_message = (f'@{user_name}, is Bringing the Pain to {", ".join(all_lurkers)}')
+                    godot_message = (f'{user_name}')
+
+                    return lurker_message, godot_message, first_lurker, random_lurkers,all_lurkers, item_position, None
+                else:
+                    nodody_is_infront= self.lurker_position[user_name], None
+                    return nodody_is_infront
+                
+            else:
+                return None
+
+        
+    
+        # elif event_id == red_chanel_point:
+        #     reditem_position = self._lurkers[user_name].points%60.0
+        #     if user_name in self.lurker_position:
+        #         red_attacking_lurker = self.lurker_position[user_name][1]
+        #         if red_attacking_lurker > 1:
+        #             lurker_infront = list(self.lurker_position.values())[red_attacking_lurker-2]
+        #             lurker_message = (f'@{user_name}, IS LOCKED ON {lurker_infront[user_name]}')
+        #             godot_message = (f'{user_name}')
+
+        #             return self.lurker_position[user_name], lurker_infront, reditem_position, None
+        #         else:
+        #             nodody_is_infront= self.lurker_position[user_name], None
+        #             return nodody_is_infront
+                
+        #     else:
+        #         return None
+            
+        # elif event_id == blue_chanel_point: 
+        #     pass
+        # else:
+        #     print('this shit didnt work for the banana')
+        #     return  None
+    
+#this is running to watch all attacks on pllayer this is designed to listen
     def run_lap (self):
+        conflicted_lurker = None 
         for item in self.find_item:
-            for lurker in self._lurkers:
+            for lurker in self._lurkers.values():
                 if lurker.points%60.0 == item[lurker.points%60.0]:
+                    
                     print('did I ever tell you were my heero')          
-                pass
+                return lurker
 
 
 #race management 
@@ -139,8 +258,7 @@ class Bot_one(commands.Bot):
         self.active_connection:Optional[WebSocketServerProtocol] = None
         self.pubsub = pubsub.PubSubPool(self)
         self.lurker_gang = LurkerGang()
-        
-    
+          
     async def create_or_get_lurker(self, name: str)-> Lurker:
         lower_case_name =name.lower()
         new_lurker = self.lurker_gang[lower_case_name]
@@ -179,10 +297,89 @@ class Bot_one(commands.Bot):
         chat_lurker = await self.create_or_get_lurker(event.user.name)
         channel = self.connected_channels[0]
         event_id = event.reward.id
-        lurker_message,  godot_message = self.lurker_gang.use_item(chat_lurker, event_id)
+        lurker_message,  godot_message = self.lurker_gang.use_yellowitem(chat_lurker, event_id)
         await channel.send(lurker_message)
         self.message_queue.append(godot_message)
+
+    #shield damage
+    # async def shield_hit(self):
+    #     hurt_players = (self.damage_from_yellow_item()[0], self.damage_from_blue_item()[0], self.damage_from_red_item()[0])
+    #     if 
+
+    # Item Damage point minus
+    async def damage_from_yellow_item(self, event: pubsub.PubSubChannelPointsMessage):  
+        hurt_player = self.lurker_gang.run_lap()
+        if hurt_player != None:
+            hurt_lurker = hurt_player.user_name
+            yellow_attacking_lurker = self.lurker_gang.use_yellowitem()[2]
+            channel = self.connected_channels[0]
+            if hurt_player.user_name in self.lurker_gang.lurkers_with_shield:
+                self.lurker_gang.hit_shield(hurt_lurker)
+                if self.lurker_gang.hit_shield(hurt_lurker)[2] is 0:
+                    hurt_player == self.lurker_gang.use_yellowitem(yellow_attack)
+                    hurt_player.add_points(-1)
+                    await channel.send(f'@{yellow_attacking_lurker}! Just caught {hurt_player} Lacking!')
+                    self.message_queue.append(f'{setting_lurker_points},{hurt_player.user_name},{hurt_player.points}')
+                    #shield check
+                    
+                    return hurt_lurker
+
+                else:
+                    hurt_player = self.lurker_gang.run_lap()
+                    if hurt_player == self.lurker_gang.run_lap():
+                        hurt_player.add_points(-2)
+                        await channel.send(f'@{yellow_attacking_lurker}! You just Ran into Your own Trap? Tragic!')
+                        self.message_queue.append(f'{setting_lurker_points},{hurt_player.user_name},{hurt_player.points}')
+                        if hurt_player.user_name in self.lurker_gang.lurkers_with_shield:
+                            self.lurker_gang.hit_shield(hurt_lurker)[2]
+                            await channel.send(f'@{yellow_attacking_lurker}! You just Ran into Your own Trap? Tragic!')
+                            self.message_queue.append(f'{setting_lurker_points},{hurt_player.user_name},{hurt_player.points}')
+                            
+        
+    async def damage_from_red_item(self):
+        hurt_player = self.lurker_gang.run_lap()
+        sleep_duration = random.randint(3, 10)
+        if hurt_player != None:
+            hurt_lurker = hurt_player.user_name
+            red_attacking_lurker = self.lurker_gang.use_reditem()[2]
+            channel = self.connected_channels[0]
+            if hurt_player == self.lurker_gang.use_reditem(red_attack):
+                if hurt_player == self.lurker_gang.use_reditem(red_attacking_lurker):
+                    hurt_player.add_points(-4)
+                    await channel.send(f'@{red_attacking_lurker}! STOP HITTING YOURSELF!!!')
+                    self.message_queue.append(f'{setting_lurker_points},{hurt_player.user_name},{hurt_player.points}')
+                    return hurt_lurker
+                    
+            else:
+                if hurt_player != self.lurker_gang.use_reditem(red_attacking_lurker):
+                    await channel.send(f'@{red_attacking_lurker}! Is Locked-on {hurt_player} Quick SHEILD UP!')
+                    time.sleep(sleep_duration)
+                    #CHECK IF THE USER HAS A SHIELD
+                    hurt_player.add_points(-2)
+                    self.message_queue.append(f'{setting_lurker_points},{hurt_player.user_name},{hurt_player.points}')
     
+
+    async def damage_from_blue_item(self):
+        hurt_player = self.lurker_gang.run_lap()
+        sleep_duration = random.randint(3, 10)
+        if hurt_player != None:
+            hurt_lurker = hurt_player.user_name
+            blue_attacking_lurker = self.lurker_gang.use_reditem()[2]
+            channel = self.connected_channels[0]
+            if hurt_player == self.lurker_gang.use_reditem(blue_attack):
+                if hurt_player == self.lurker_gang.use_reditem(blue_attacking_lurker):
+                    hurt_player.add_points(-4)
+                    await channel.send(f'@{blue_attacking_lurker}! STOP HITTING YOURSELF!!!')
+                    self.message_queue.append(f'{setting_lurker_points},{hurt_player.user_name},{hurt_player.points}')
+                    return hurt_lurker
+                    
+            else:
+                if hurt_player != self.lurker_gang.use_reditem(blue_attacking_lurker):
+                    await channel.send(f'@{blue_attacking_lurker}! Is Locked-on {self.lurker_gang.use_blueitem()[2]} Quick SHEILD UP!')
+                    time.sleep(sleep_duration)
+                    #CHECK IF THE USER HAS A SHIELD
+                    hurt_player.add_points(-2)
+                    self.message_queue.append(f'{setting_lurker_points},{hurt_player.user_name},{hurt_player.points}')
     #game loop
     async def game_loop(self):
         while 0 != 1:
