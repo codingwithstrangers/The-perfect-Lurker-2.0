@@ -17,8 +17,8 @@ logger = logging.getLogger("twitchio.http")
 
 
 class Yellowitem(Item):
-    def init(self, position, player):
-        super().init('', position, player, 'yellow_item')
+    def __init__(self, position, player):
+        super().__init__('', position, player, 'yellow_item')
 
     def use(self):
         print(f"{self.player} used yellow item, at {self.position}")
