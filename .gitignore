@@ -1,7 +1,8 @@
 .gitattributes
 clientshit.py
+**/.env
 .env
-__pycache__/
+**/__pycache__/
 Client Secret.txt
 ngrok.yml
 webhook.py

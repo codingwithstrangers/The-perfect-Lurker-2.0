@@ -1,5 +1,5 @@
 import pprint
-from typing import Callable, List, Optional, Dict, Set, Tuple
+from typing import Callable, List, Optional, Dict, Tuple
 from twitchio.ext import pubsub, commands, routines
 from configuration import *
 import logging
@@ -15,7 +15,7 @@ logger = logging.getLogger("twitchio.http")
 #custom_id for channel points
 perfect_lurker_channel_id="a374b031-d275-4660-9755-9a9977e7f3ae"
 talking_lurker_id="d229fa01-0b61-46e7-9c3c-a1110a7d03d4"
-yellow_channel_point = 'bb5f96f3-714d-4b09-9203-9b698a97aa7f'
+yellow_channel_point = ''
 red_chanel_point = ''
 blue_chanel_point = ''
 shield_chanel_point = ''
@@ -89,10 +89,6 @@ class Lurker:
     def position(self) -> int:
         return self.points % 60
 
-    @property
-    def in_race(self) -> bool:
-        return self.race_status == status_in_race
-
     def set_shield(self, value: int):
         self.shield_points = value
 
@@ -123,21 +119,20 @@ class LurkerGang:
     def drop_yellow_item(self, lurker: Lurker):
         # drop our banana behind us, like normal
         self.yellow_items[(lurker.points+59)%60] = lurker
-        print(f'adding a banana at {(lurker.points+59)%60}')
 
-    # def find_hit_lurkers(self) -> Tuple[List[int], List[Lurker]]:
-        # hit_items:Set[int] = set()
-        # hit_lurkers:List[Lurker] = []
+    def find_hit_lurkers(self) -> Tuple[List[int], List[Lurker]]:
+        hit_items:List[int] = []
+        hit_lurkers:List[Lurker] = []
 
-        # for lurker in self._lurkers.values():
-        #     if lurker.position in self.yellow_items:
-        #         hit_items.add(lurker.position)
-        #         hit_lurkers.append(lurker)
+        for lurker in self._lurkers.values():
+            if lurker.position in self.yellow_items:
+                hit_items.append(lurker.position)
+                hit_lurkers.append(lurker)
 
-        # for hit_item in hit_items:
-        #     del self.yellow_items[hit_item]
+        for hit_item in hit_items:
+            del self.yellow_items[hit_item]
 
-        # return (list(hit_items), hit_lurkers)
+        return (hit_items, hit_lurkers)
         
     # def use_reditem(self, user_name: str, event_id: str):
         # item_position = self._lurkers[user_name].points%60.0
@@ -257,63 +252,28 @@ class Bot_one(commands.Bot):
         if event.user.name is None:
             return
 
-        channel = self.connected_channels[0]
-        
-
         chat_lurker = await self.create_or_get_lurker(event.user.name)
-        if not chat_lurker.in_race:
-            await channel.send(f'@{event.user.name}, you are not in the race')
-            return
-
         self.lurker_gang.drop_yellow_item(chat_lurker)
+
+        channel = self.connected_channels[0]
         await channel.send(f'@{event.user.name}, dropped a yellow item')
-        self.message_queue.append(f'{yellow_banana_drop},{event.user.name},{chat_lurker.position}')
-        await self.check_yellow_items()
+        self.message_queue.append(f'{yellow_banana_drop},{event.user.name}')
 
     async def check_yellow_items(self):
-        
         # this may run before we connect, so just check we have a channel first
         if len(self.connected_channels) == 0:
             return
 
-        print('checking yellow items')
-        channel = self.connected_channels[0]
-        
         check = self.lurker_gang.find_hit_lurkers()
         for hit_item in check[0]:
             self.message_queue.append(f'{yellow_banana_hit},{hit_item}')
 
-        for hit_item in hit_items:
-            del self.yellow_items[hit_item]
+        for hit_lurker in check[1]:
+            hit_lurker.add_points(-2)
+            self.message_queue.append(f'{setting_lurker_points},{hit_lurker.user_name},{hit_lurker.points}')
+            await channel.send(f'@{hit_lurker.user_name} got hit my a banana!')
 
-        
-        #who set the trap
-        for pos, dropper in self.lurker_gang.yellow_items():
-            for lurker in self.lurker_gang:
-                if lurker == dropper:
-                    attacking_yellow_lurker = dropper
-                if pos == lurker.position:
-                    hit_item = pos
-
-
-                hit_items:Set[int] = set()
-                hit_lurkers:List[Lurker] = []
-
-                for lurker in self.lurker_gang():
-                    if lurker.hit_item is self.yellow_items:
-                        hit_items.add(lurker.position)
-                        hit_lurkers.append(lurker)
-
-               
-
-                for hit_lurker in check[1]:
-                    hit_lurker.add_points(-2)
-                    self.message_queue.append(f'{setting_lurker_points},{hit_lurker.user_name},{hit_lurker.points}')
-                    await channel.send(f'@{hit_lurker.user_name} got hit by a banana!')
-
-                return (list(hit_items), hit_lurkers)
-
-        # hurt_player = self.lurker_gang.run_lap()
+        ''' # hurt_player = self.lurker_gang.run_lap()
         # if hurt_player != None:
             # hurt_lurker = hurt_player.user_name
             # yellow_attacking_lurker = self.lurker_gang.use_yellowitem()[2]
@@ -385,17 +345,17 @@ class Bot_one(commands.Bot):
                     # #CHECK IF THE USER HAS A SHIELD
                     # hurt_player.add_points(-2)
                     # self.message_queue.append(f'{setting_lurker_points},{hurt_player.user_name},{hurt_player.points}')
-
+'''
     #remove points for talking 
     async def event_message(self, message):
         if message.echo or message.author is None or message.author.name is None:
             return
 
         talking_lurker = await self.create_or_get_lurker(message.author.name)
-        if talking_lurker.add_points(-1):
-            await self.handle_commands(message)
-            self.message_queue.append(f'{setting_lurker_points},{talking_lurker.user_name},{talking_lurker.points}')
-            await self.check_yellow_items()
+        talking_lurker.add_points(-1)
+        await self.handle_commands(message)
+        self.message_queue.append(f'{setting_lurker_points},{talking_lurker.user_name},{talking_lurker.points}')
+        await self.check_yellow_items()
 
     @commands.command()
     async def remove(self, ctx: commands.Context):
@@ -423,15 +383,16 @@ class Bot_one(commands.Bot):
         with open(all_viewers, 'r') as file:
             lines = {name.strip() for name in file}
             
-        #I want to give everyone who is in lurkergang
-        # a point if they are in all_viewers and
-        # they have in race status
+            #I want to give everyone who is in lurkergang
+            # a point if they are in all_viewers and
+            #  they have in race status
         for lurker in self.lurker_gang: 
             if lurker.user_name in lines:
                 if lurker.add_points(+1):
                     self.message_queue.append(f'{setting_lurker_points},{lurker.user_name},{lurker.points}')
 
         await self.check_yellow_items()
+
         print("this is the end of the tic tok")
 
     async def register(self,websocket):
@@ -465,7 +426,7 @@ class Bot_one(commands.Bot):
     
         
 bot = Bot_one()
-routines.routine(seconds=10)(bot.give_point_timer).start()
+routines.routine(seconds=60)(bot.give_point_timer).start()
 lurker_task_made = bot.loop.create_task(bot.run())
 task_for_botgodot = bot.loop.create_task(bot.pytogodot())
 gather_both_task = asyncio.gather(lurker_task_made,task_for_botgodot)
