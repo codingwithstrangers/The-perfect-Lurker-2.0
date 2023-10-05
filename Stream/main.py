@@ -10,10 +10,11 @@ import asyncio
 from websockets.server import serve, WebSocketServerProtocol
 
 
-#Debug
-logging.basicConfig(level=logging.DEBUG) # Set this to DEBUG for more logging, INFO for regular logging
 logger = logging.getLogger("twitchio.http")
-log = logger
+logger.setLevel(logging.WARN)
+
+log = logging.getLogger('event_stream')
+log.setLevel(logging.DEBUG)
 
 #custom_id for channel points
 perfect_lurker_channel_id="a374b031-d275-4660-9755-9a9977e7f3ae"
