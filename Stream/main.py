@@ -11,7 +11,7 @@ from websockets.server import serve, WebSocketServerProtocol
 
 
 #Debug
-logging.basicConfig(level=logging.INFO) # Set this to DEBUG for more logging, INFO for regular logging
+logging.basicConfig(level=logging.DEBUG) # Set this to DEBUG for more logging, INFO for regular logging
 logger = logging.getLogger("twitchio.http")
 log = logger
 
@@ -97,6 +97,7 @@ class EventStream:
 
 event_separator = ","
 "how our event code and values are separated in our websocket packets"
+
 
 
 class Lurker:
@@ -264,13 +265,20 @@ class LurkerEvent(Event):
             and self.user_name == other.user_name
         )
 
-
-
-
 class JoinRaceAttemptedEvent(LurkerEvent):
     """
     Event used when a chatter attempts to join the race
     """
+
+class TalkingLurkerEvent(LurkerEvent):
+    ''''
+    Ayo  (lol) this is the event used to send an event of 
+    a talking lurker
+    '''
+
+class TalkingChannelPointEvent(LurkerEvent):
+    '''This is the event to sent a notice of a lurker talking_lurker_id
+    butt they are using a channel point'''
 
 
 class LeaveRaceAttemptedEvent(LurkerEvent):
@@ -306,6 +314,8 @@ class LurkerGang:
         self._event_stream = event_stream
         event_stream.add_consumer(self._on_join_attempt)
         event_stream.add_consumer(self._on_leave_attempt)
+        event_stream.add_consumer(self._on_talking_lurker)
+        event_stream.add_consumer(self._on_talking_channel_point)
 
     def __getitem__(self, key: str) -> Optional[Lurker]:
         return self._lurkers.get(key)
@@ -328,11 +338,23 @@ class LurkerGang:
             return
         await lurk.join_race(self._event_stream)
 
+    async def _on_talking_lurker(self, ev: TalkingLurkerEvent):
+        lurk = self[ev.user_name]
+        if not lurk:
+            return
+        await lurk.add_points(self._event_stream,-1)
+
     async def _on_leave_attempt(self, ev: LeaveRaceAttemptedEvent):
         lurk = self[ev.user_name]
         if not lurk:
             return
         await lurk.leave_race(self._event_stream)
+
+    async def _on_talking_channel_point(self, ev: TalkingChannelPointEvent):
+        lurk = self[ev.user_name]
+        if not lurk:
+            return 
+        await lurk.add_points(self._event_stream, 1)
 
 class SocketEvent(Event):
     """
@@ -373,9 +395,6 @@ class ChatMessageEvent(Event):
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, ChatMessageEvent) and self.message == other.message
-
-
-
 
 
 class JoinedRaceEvent(SocketEvent):
@@ -434,6 +453,11 @@ class HitBananaEvent(SocketEvent):
         "Lurker who dropped the banana, may by the same as hit_lurker"
         self.position = position
         "Where the banana was dropped on the field"
+ 
+# class ChannelPointForTalkingLurkers(SocketEvent):
+#     def __init__(self, ]):
+#         super().__init__(code, values)\
+
 
 
 
@@ -447,7 +471,8 @@ class Bot_one(commands.Bot):
         self.lurker_gang = lurker_gang
         self.event_stream = event_stream
         self.channel_point_handlers:Dict[str,Callable] = {
-            perfect_lurker_channel_id: self.lurker_joins_race}
+            perfect_lurker_channel_id: self.lurker_joins_race,
+            talking_lurker_id: self.talking_channel_point}
 
     async def event_pubsub_channel_points(self, event: pubsub.PubSubChannelPointsMessage):
         if event.user.name is None:
@@ -456,6 +481,7 @@ class Bot_one(commands.Bot):
         pprint.pprint(event.reward) #rerun in terminal look for id
         if event.reward.id in self.channel_point_handlers:
             await self.channel_point_handlers[event.reward.id](event)
+
 
     async def create_lurker(self, name: str):
         lower_case_name = name.lower()
@@ -466,8 +492,15 @@ class Bot_one(commands.Bot):
         logger.info(user_profiles[0].profile_image)
         new_lurker = Lurker(user_name=lower_case_name, image_url=user_profiles[0].profile_image)
         self.lurker_gang.add(new_lurker)
-            
-      
+
+    #channelpoint for talking
+    async def talking_channel_point(self, event: pubsub.PubSubChannelPointsMessage):  
+        if event.user.name is None:
+            return 
+
+        # await self.create_lurker(event.user.name)
+        await self.event_stream.send(TalkingChannelPointEvent(event.user.name))
+        
         
     #message for joining race
     async def lurker_joins_race(self, event: pubsub.PubSubChannelPointsMessage):
@@ -490,13 +523,7 @@ class Bot_one(commands.Bot):
             return
 
         await self.create_lurker(ctx.author.name)
-        await self.event_stream.send(LeaveRaceAttemptedEvent(ctx.author.name))
-        
-
-    async def consume_chat_message(self,event: ChatMessageEvent):
-        channel= self.connected_channels[0]
-        await channel.send(event.message)
-        
+        await self.event_stream.send(LeaveRaceAttemptedEvent(ctx.author.name))    
     
 
     #remove points for talking 
@@ -504,6 +531,9 @@ class Bot_one(commands.Bot):
         if message.echo or message.author is None or message.author.name is None:
             return
 
+        await self.create_lurker(message.author.name)
+        await self.event_stream.send(TalkingLurkerEvent(message.author.name))
+        print('TAGS:', message.tags)
         # talking_lurker = await self.create_or_get_lurker(message.author.name)
         # talking_lurker.add_points(-1)
         await self.handle_commands(message)
