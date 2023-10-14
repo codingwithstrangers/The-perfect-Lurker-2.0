@@ -322,7 +322,7 @@ class LurkerGang:
         # event_stream.add_consumer(self._on_talking_channel_point)
 
     def __getitem__(self, key: str) -> Optional[Lurker]:
-        return self._lurkers.get(key)
+        return self._lurkers.get(key.lower())
 
     def __iter__(self) -> Iterator[Lurker]:
         return self._lurkers.values().__iter__()
@@ -361,7 +361,15 @@ class LurkerGang:
     #         return 
     #     await lurk.add_points(self._event_stream, 1)
 
+    #the test for TDD
+    def lurker_in_front_of(self, attacking_lurker: Lurker):
+        hit_lurker = attacking_lurker
+        for other in self:
+            if other.points > attacking_lurker.points:
 
+                return other
+
+        return attacking_lurker
 
 class SocketEvent(Event):
     """
@@ -574,6 +582,9 @@ class Field:
         if ev.position not in self._bananas:
             self._bananas[ev.position] = []
         self._bananas[ev.position].append(ev.lurker)
+
+
+    
 
 class Bot_one(commands.Bot):
     def __init__(self,lurker_gang: LurkerGang, event_stream:EventStream):

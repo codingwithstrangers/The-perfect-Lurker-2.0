@@ -11,11 +11,13 @@ import asyncio
 from websockets.server import serve, WebSocketServerProtocol
 
 
+#info
+logging.basicConfig(level=logging.WARN)
 logger = logging.getLogger("twitchio.http")
 logger.setLevel(logging.WARN)
 
 log = logging.getLogger('event_stream')
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 #custom_id for channel points
 perfect_lurker_channel_id="a374b031-d275-4660-9755-9a9977e7f3ae"
@@ -83,14 +85,14 @@ class EventStream:
         sig = inspect.signature(consumer)
         param = list(sig.parameters.values())[0]
 
-        log.debug("adding consumer: %s", sig)
+        log.info("adding consumer: %s", sig)
         self._consumers.append((param.annotation, consumer))  # type: ignore
 
     async def send(self, ev: Event):
         """
         Send a new event to all our consumers.
         """
-        log.debug("sending event: %s", ev)
+        log.info("sending event %s %s", ev.__class__.__name__, ev)
 
 
         for con in self._consumers:
@@ -145,7 +147,7 @@ class Lurker:
         """
 
         if self.race_status == status_in_race:
-            log.debug(
+            log.info(
                 "lurker %s tried to join the race but is already in it", self.user_name
             )
             await event_stream.send(
@@ -154,7 +156,7 @@ class Lurker:
             return
 
         if self.race_status == status_removed_race:
-            log.debug(
+            log.info(
                 "lurker %s tried to join the race but already left", self.user_name
             )
             await event_stream.send(
@@ -162,7 +164,7 @@ class Lurker:
             )
             return
 
-        log.debug("lurker %s joined the race", self.user_name)
+        log.info("lurker %s joined the race", self.user_name)
         self.race_status = status_in_race
         await event_stream.send(JoinedRaceEvent(self))
         await event_stream.send(
@@ -180,13 +182,13 @@ class Lurker:
         """
 
         if self.race_status != status_in_race:
-            log.debug("lurker %s tried to leave the race", self.user_name)
+            log.info("lurker %s tried to leave the race", self.user_name)
             await event_stream.send(
                 ChatMessageEvent(f"@{self.user_name} DADDY CHILL You not even in the Race")
             )
             return
 
-        log.debug("lurker %s left the race", self.user_name)
+        log.info("lurker %s left the race", self.user_name)
         self.race_status = status_removed_race
         await event_stream.send(LeftRaceEvent(self))
         await event_stream.send(
@@ -317,10 +319,10 @@ class LurkerGang:
         event_stream.add_consumer(self._on_join_attempt)
         event_stream.add_consumer(self._on_leave_attempt)
         event_stream.add_consumer(self._on_talking_lurker)
-        event_stream.add_consumer(self._on_talking_channel_point)
+        # event_stream.add_consumer(self._on_talking_channel_point)
 
     def __getitem__(self, key: str) -> Optional[Lurker]:
-        return self._lurkers.get(key)
+        return self._lurkers.get(key.lower())
 
     def __iter__(self) -> Iterator[Lurker]:
         return self._lurkers.values().__iter__()
@@ -330,7 +332,7 @@ class LurkerGang:
         Add a lurker to our gang.
         """
 
-        log.debug("adding %s to lurker gang", lurker.user_name)
+        log.info("adding %s to lurker gang", lurker.user_name)
         self._lurkers[lurker.user_name.lower()] = lurker
 
 
@@ -341,6 +343,7 @@ class LurkerGang:
         await lurk.join_race(self._event_stream)
 
     async def _on_talking_lurker(self, ev: TalkingLurkerEvent):
+        
         lurk = self[ev.user_name]
         if not lurk:
             return
@@ -352,11 +355,13 @@ class LurkerGang:
             return
         await lurk.leave_race(self._event_stream)
 
-    async def _on_talking_channel_point(self, ev: TalkingChannelPointEvent):
-        lurk = self[ev.user_name]
-        if not lurk:
-            return 
-        await lurk.add_points(self._event_stream, 1)
+    # async def _on_talking_channel_point(self, ev: TalkingChannelPointEvent):
+    #     lurk = self[ev.user_name]
+    #     if not lurk:
+    #         return 
+    #     await lurk.add_points(self._event_stream, 1)
+
+
 
 class SocketEvent(Event):
     """
@@ -460,8 +465,115 @@ class HitBananaEvent(SocketEvent):
 #     def __init__(self, ]):
 #         super().__init__(code, values)\
 
+# The field
+class Field:
+    """
+    Field manages any race wide events such as items dropped.
+    """
+
+    def __init__(self, lurker_gang: LurkerGang, event_stream: EventStream):
+        """
+        Create a new field.
+        """
+
+        self._lurker_gang = lurker_gang
+        event_stream.add_consumer(self._on_set_points)
+        event_stream.add_consumer(self._on_drop_banana)
+        self._event_stream = event_stream
+
+        # we may want to create a base Item class, but for now just bananas is fine.
+        self._bananas: Dict[int, List[Lurker]] = {}
+
+    async def _on_set_points(self, ev: SetPointsEvent):
+        """
+        When a lurker has there points updated, they may have hit a banana
+        Events Emitted:
+        1. `.events.SetPointsEvent` when a banana is hit and a lurker loses points
+        1. `.events.ChatMessageEvent` when a banana is hit
+        1. `.events.HitBananaEvent` for who hit the banana
+        """
+
+        if ev.lurker.position in self._bananas:
+            attacking_lurker = self._bananas[ev.lurker.position].pop(0)
+            # if we have no more bananas here then we can delete it
+            if not self._bananas[ev.lurker.position]:
+                del self._bananas[ev.lurker.position]
+                
+            if ev.lurker == attacking_lurker:
+                log.info("lurker %s hit there own banana", ev.lurker.user_name)
+                await ev.lurker.add_points(self._event_stream, -2)
+                await self._event_stream.send(
+                    HitBananaEvent(ev.lurker.position, ev.lurker, ev.lurker)
+                )
+                await self._event_stream.send(
+                    ChatMessageEvent(
+                        f"@{ev.lurker.user_name} What are you doing hitting your own trap "
+                    )
+                )
+            else:
+                log.info(
+                    "lurker %s hit %s's banana",
+                    ev.lurker.user_name,
+                    attacking_lurker.user_name,
+                )
+                await ev.lurker.add_points(self._event_stream, -1)
+                await self._event_stream.send(
+                    HitBananaEvent(ev.lurker.position, ev.lurker, attacking_lurker)
+                )
+                await self._event_stream.send(
+                    ChatMessageEvent(
+                        f"@{ev.lurker.user_name} hit the banana set by @{attacking_lurker.user_name}"
+                    )
+                )
+
+            
 
 
+
+    async def _on_drop_banana(self, ev: DropBananaEvent):
+        """
+        When a banana is dropped, check to see if any lurker is immediately hit by it
+        and if not, save it for later.
+        Bananas can stack on at the same position if two lurkers drop them from the same point.
+        Events Emitted:
+        1. `.events.SetPointsEvent` when a banana is hit immediately and a lurker loses points
+        1. `.events.ChatMessageEvent` when a banana is hit immediately
+        1. `.events.HitBananaEvent` for who hit the banana
+        """
+        if not ev.lurker.in_race:
+            await self._event_stream.send(
+                    ChatMessageEvent(
+                        f"@{ev.lurker.user_name} hit the banana just set by @{ev.lurker.user_name}"
+                    )
+                ) 
+            return
+        
+        for lurker in self._lurker_gang:
+            if not lurker.in_race:
+                continue
+
+            if lurker.position == ev.position:
+                log.info(
+                    "lurker %s hit %s's banana that was just dropped",
+                    lurker.user_name,
+                    ev.lurker.user_name,
+                )
+                await lurker.add_points(self._event_stream, -1)
+                await self._event_stream.send(
+                    HitBananaEvent(ev.lurker.position, lurker, ev.lurker)
+                )
+                await self._event_stream.send(
+                    ChatMessageEvent(
+                        f"@{lurker.user_name} hit the banana just set by @{ev.lurker.user_name}"
+                    )
+                )
+                return
+
+        log.info("banana dropped at %d by %s", ev.position, ev.lurker.user_name)
+
+        if ev.position not in self._bananas:
+            self._bananas[ev.position] = []
+        self._bananas[ev.position].append(ev.lurker)
 
 class Bot_one(commands.Bot):
     def __init__(self,lurker_gang: LurkerGang, event_stream:EventStream):
@@ -474,7 +586,7 @@ class Bot_one(commands.Bot):
         self.event_stream = event_stream
         self.channel_point_handlers:Dict[str,Callable] = {
             perfect_lurker_channel_id: self.lurker_joins_race,
-            talking_lurker_id: self.talking_channel_point}
+            yellow_channel_point: self.yellow_trap}
 
     async def event_pubsub_channel_points(self, event: pubsub.PubSubChannelPointsMessage):
         if event.user.name is None:
@@ -489,19 +601,20 @@ class Bot_one(commands.Bot):
         lower_case_name = name.lower()
         new_lurker = self.lurker_gang[lower_case_name]
         if new_lurker is not None:
-            return 
+            return new_lurker
         user_profiles = await self.fetch_users(names=[lower_case_name])
         logger.info(user_profiles[0].profile_image)
         new_lurker = Lurker(user_name=lower_case_name, image_url=user_profiles[0].profile_image)
         self.lurker_gang.add(new_lurker)
+        return new_lurker
 
     #channelpoint for talking
-    async def talking_channel_point(self, event: pubsub.PubSubChannelPointsMessage):  
+    async def yellow_trap(self, event: pubsub.PubSubChannelPointsMessage):  
         if event.user.name is None:
             return 
 
-        # await self.create_lurker(event.user.name)
-        await self.event_stream.send(TalkingChannelPointEvent(event.user.name))
+        channel_point_lurker= await self.create_lurker(event.user.name)
+        await self.event_stream.send(DropBananaEvent(channel_point_lurker))
         
         
     #message for joining race
@@ -536,10 +649,11 @@ class Bot_one(commands.Bot):
     async def event_message(self, message):
         if message.echo or message.author is None or message.author.name is None:
             return
-
-        await self.create_lurker(message.author.name)
-        await self.event_stream.send(TalkingLurkerEvent(message.author.name))
-        print('TAGS:', message.tags)
+            
+        if 'custom-reward-id' not in message.tags or message.tags['custom-reward-id'] != talking_lurker_id:
+            await self.create_lurker(message.author.name)        
+            await self.event_stream.send(TalkingLurkerEvent(message.author.name))
+        # print('TAGS:', message.tags)
         # talking_lurker = await self.create_or_get_lurker(message.author.name)
         # talking_lurker.add_points(-1)
         await self.handle_commands(message)
@@ -574,6 +688,7 @@ async def point_timer(lurker_gang: LurkerGang, event_stream: EventStream):
 if __name__ == '__main__':
     event_stream = EventStream()
     lurker_gang = LurkerGang(event_stream)
+    field= Field(lurker_gang,event_stream)
     bot = Bot_one(lurker_gang,event_stream)
     point_partial = functools.partial(point_timer,lurker_gang,event_stream)
     routines.routine(seconds=10)(point_partial).start()
