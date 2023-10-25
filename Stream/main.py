@@ -361,15 +361,19 @@ class LurkerGang:
     #         return 
     #     await lurk.add_points(self._event_stream, 1)
 
-    #the test for TDD
-    def lurker_in_front_of(self, attacking_lurker: Lurker):
-        hit_lurker = attacking_lurker
+    #the test for TDD we want this match up with the left with the least amount of code
+    def lurkers_in_front_of(self, attacking_lurker: Lurker) -> List[Lurker]:
+        # next_lurkers = ['this hint come next on dbz try and make right side give me the left side also dont change left side ']
+        next_lurker = [Lurker]
+        hit_lurker = [Lurker]
         for other in self:
-            if other.points > attacking_lurker.points:
-
-                return other
-
-        return attacking_lurker
+            #this is how the guard claus works to 
+            # make it false to push it to contiue 
+            if other.points <= attacking_lurker.points:
+                continue
+            if not next_lurker or other.points < next_lurker.points:
+                next_lurker = hit_lurker
+        return [next_lurker] if next_lurker else [attacking_lurker]
 
 class SocketEvent(Event):
     """

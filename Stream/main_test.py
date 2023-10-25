@@ -21,47 +21,56 @@ def test_to_find_who_is_infront_of_attackinglurker():
     attacking_lurker.race_status = status_in_race
     #when redshell is used by a lurker in the (single function call sometimes)
 
-    next_lurker = lurker_gang.lurker_in_front_of(attacking_lurker)
+    next_lurkers = lurker_gang.lurkers_in_front_of(attacking_lurker)
     
     #then the return should be the lurker (only person in race)
-    # print(attacking_lurker, next_lurker)
-    assert attacking_lurker == next_lurker
+    print(attacking_lurker,"==", next_lurkers)
+    assert [attacking_lurker]== next_lurkers
 
 #When 2 or more person in the race attacking lurker should return hit lurker who is directly infront of attacking lurker
 def test_attacking_lurker_should_return_hit_lurker_who_is_directly_infront():
     event_stream = EventStream()
     lurker_gang = LurkerGang(event_stream)
-    attacking_lurker = Lurker('attacking','attack_image')
-    attacking_lurker.points = 2
-    lurker_gang.add(attacking_lurker)
-    attacking_lurker.race_status = status_in_race
-    hit_lurker = Lurker('hit','hit_image')
-    hit_lurker.points = 4
-    lurker_gang.add(hit_lurker)
-    hit_lurker.race_status = status_in_race
-    #when reshell is used by a attacking_lurker in a race with a hit_lurker in front
-    next_lurker = lurker_gang.lurker_in_front_of (attacking_lurker)
-    print(hit_lurker,"==",next_lurker)
-    assert hit_lurker == next_lurker
+    
+    for i in range(10):
+        new_lurker=Lurker(str(i), str(i))
+        new_lurker.race_status = status_in_race
+        new_lurker.points = i
+        lurker_gang.add(new_lurker)
 
-# for loop test do that here 
-def test_attacking_lurker_should_return_hit_lurker_who_is_directly_infront_addingnewlurker():
+    print(lurker_gang._lurkers)
+    print(lurker_gang.lurkers_in_front_of (lurker_gang["2"]))
+    assert [lurker_gang["3"]] == lurker_gang.lurkers_in_front_of (lurker_gang["2"])
+
+
+def test_attacking_lurkershould_return_a_hit_lurker_in_reverse_order():
     event_stream = EventStream()
     lurker_gang = LurkerGang(event_stream)
-    attacking_lurker = Lurker('attacking','attack_image')
-    attacking_lurker.points = 2
-    lurker_gang.add(attacking_lurker)
-    attacking_lurker.race_status = status_in_race
-    hit_lurker = Lurker('hit','hit_image')
-    hit_lurker.points = 4
-    lurker_gang.add(hit_lurker)
-    hit_lurker.race_status = status_in_race
-    #when reshell is used by a attacking_lurker in a race with a hit_lurker in front
-    next_lurker = lurker_gang.lurker_in_front_of (attacking_lurker)
-    print(hit_lurker,"==",next_lurker)
-    assert hit_lurker == next_lurker
+    
+    for i in range(10,1,-1):
+        new_lurker=Lurker(str(i), str(i))
+        new_lurker.race_status = status_in_race
+        new_lurker.points = i
+        lurker_gang.add(new_lurker)
+
+    print(lurker_gang._lurkers)
+    print(lurker_gang.lurkers_in_front_of (lurker_gang["2"]))
+    assert [lurker_gang["3"]] == lurker_gang.lurkers_in_front_of (lurker_gang["2"])
 
 #When 2 or more lurkers are in the race and 2 or more lurkers are in the same place as hit lurkers attacking lurker should hit both or all users
+def test_if_attacking_lurker_hits_two_or_more_lurkers_with_same_score():
+    event_stream = EventStream()
+    lurker_gang = LurkerGang(event_stream)
+    
+    for i in range(10,1,-1):
+        new_lurker=Lurker(str(i), str(i))
+        new_lurker.race_status = status_in_race
+        new_lurker.points = i//3
+        lurker_gang.add(new_lurker)
+
+    print(lurker_gang._lurkers)
+    print(lurker_gang.lurkers_in_front_of (lurker_gang["3"]))
+    assert [lurker_gang["8"], lurker_gang["7"], lurker_gang["6"]] == lurker_gang.lurkers_in_front_of (lurker_gang["3"])
 
 #process for Hit Lurker
 #A hit lurker was hit by an attacking lurker if the hit lurker and attacking lurker are the same the hit lurker takes double damage -4
@@ -78,8 +87,8 @@ for func in copy_dict.values():
         func()
 
 # Step 1: Write the test
-# Step 2: Run the tests, they should fail
+# Step 2: Run the tests, the test should fail
 # Step 3: Write the least amount of code to make the test pass
-# Step 4: Run the tests, they should pass
+# Step 4: Run the tests, the test should pass
 # Step 5 optional: Update the code to look nicer, re-running the tests until the code is clean
 # Repeat for each test
