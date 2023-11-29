@@ -1,0 +1,17 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://csyltf142l5vo"
+
+[deps]
+
+files=["res://lurkers_data.79.translation", "res://lurkers_data.https://static.translation", "res://lurkers_data.2023.translation"]
+
+source_file="res://lurkers_data.csv"
+dest_files=["res://lurkers_data.79.translation", "res://lurkers_data.https://static.translation", "res://lurkers_data.2023.translation"]
+
+[params]
+
+compress=true
+delimiter=0

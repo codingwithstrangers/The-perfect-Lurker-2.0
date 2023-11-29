@@ -364,8 +364,8 @@ class LurkerGang:
     #the test for TDD we want this match up with the left with the least amount of code
     def lurkers_in_front_of(self, attacking_lurker: Lurker) -> List[Lurker]:
         # next_lurkers = ['this hint come next on dbz try and make right side give me the left side also dont change left side ']
-        next_lurker = [Lurker]
-        hit_lurker = [Lurker]
+        # next_lurker = [Lurker]
+        # hit_lurker = [Lurker]
         for other in self:
             #this is how the guard claus works to 
             # make it false to push it to contiue 
@@ -373,7 +373,7 @@ class LurkerGang:
                 continue
             if not next_lurker or other.points < next_lurker.points:
                 next_lurker = hit_lurker
-        return [next_lurker] if next_lurker else [attacking_lurker]
+        return [] if next_lurker else [attacking_lurker]
 
 class SocketEvent(Event):
     """
