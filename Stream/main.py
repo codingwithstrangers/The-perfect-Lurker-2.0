@@ -684,7 +684,10 @@ class Bot_one(commands.Bot):
         for lurker in self.lurker_gang:
             print(lurker)
         
- 
+    async def pytogodot(self):
+        async with serve(self.register, "localhost", 8765):
+            await self.send_messages()  # run forever
+
     #last function
     async def run(self):
         topics = [
@@ -706,8 +709,8 @@ if __name__ == '__main__':
     field= Field(lurker_gang,event_stream)
     bot = Bot_one(lurker_gang,event_stream)
     point_partial = functools.partial(point_timer,lurker_gang,event_stream)
-    routines.routine(seconds=10)(point_partial).start()
+    routines.routine(seconds=60)(point_partial).start()
     lurker_task_made = bot.loop.create_task(bot.run())
-    # task_for_botgodot = bot.loop.create_task(bot.pytogodot())
+    task_for_botgodot = bot.loop.create_task(bot.pytogodot())
     gather_both_task = asyncio.gather(lurker_task_made)
     bot.loop.run_until_complete(gather_both_task)

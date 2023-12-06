@@ -476,9 +476,10 @@ class Bot_one(commands.Bot):
                 await asyncio.sleep(3)
                 continue
             if len(self.message_queue)> 0:
+                print(self.message_queue)
                 await self.active_connection.send("\n".join(self.message_queue))
                 self.message_queue.clear()
-            await asyncio.sleep(.1)
+                await asyncio.sleep(.1)
 
     async def pytogodot(self):
         async with serve(self.register, "localhost", 8765):
