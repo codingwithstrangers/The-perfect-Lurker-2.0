@@ -88,7 +88,7 @@ for func in copy_dict.values():
 
 # Step 1: Write the test
 # Step 2: Run the tests, the test should fail
-# Step 3: Write the least amount of code to make the test pass
+# Step 3: Write the least amount of code to make the test pass (on the left side )
 # Step 4: Run the tests, the test should pass
 # Step 5 optional: Update the code to look nicer, re-running the tests until the code is clean
 # Repeat for each test

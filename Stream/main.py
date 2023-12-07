@@ -99,6 +99,19 @@ class EventStream:
             if isinstance(ev, con[0]):  # type: ignore
                 await con[1](ev)
 
+    """ This is a delay function that will be uses to make Red shells and Blue Shell delay after the 
+hit_lurkers are identified in the lurker_gang"""
+
+    async def delay_events(self, ev: Event, delay: int):
+        async def one_time_send():
+            await self.send(ev)
+        routines.routine(
+            wait_first=True,
+            seconds=delay,
+            iterations=1,
+        )(one_time_send).start()
+
+
 event_separator = ","
 "how our event code and values are separated in our websocket packets"
 
@@ -361,20 +374,18 @@ class LurkerGang:
     #         return 
     #     await lurk.add_points(self._event_stream, 1)
 
-    #the test for TDD we want this match up with the left with the least amount of code
+    #the test for TDD we want this match up with the right with the least amount of code
     def lurkers_in_front_of(self, attacking_lurker: Lurker) -> List[Lurker]:
-        # next_lurkers = ['this hint come next on dbz try and make right side give me the left side also dont change left side ']
-        # next_lurker = [Lurker]
-        # hit_lurker = [Lurker]
-        for other in self:
-            #this is how the guard claus works to 
-            # make it false to push it to contiue 
-            if other.points <= attacking_lurker.points:
-                continue
-            if not next_lurker or other.points < next_lurker.points:
-                next_lurker = hit_lurker
-        return [] if next_lurker else [attacking_lurker]
+        ahead_lurkers = [lurker for lurker in self if lurker.points > attacking_lurker.points]
+        lowest_points_lurker_ahead = min(ahead_lurkers, key=lambda x:x.points, default=None)
 
+        # stop being scary and write a loop to check who has the same points
+        if lowest_points_lurker_ahead:
+            return [lurker for lurker in ahead_lurkers if lurker.points == lowest_points_lurker_ahead.points]
+            
+        return [attacking_lurker]
+    
+        
 class SocketEvent(Event):
     """
     Base class of any socket event that occurs in our system.
@@ -406,6 +417,18 @@ class SocketEvent(Event):
 class ChatMessageEvent(Event):
     """
     Event used to send a message to twitch chat.
+    """
+
+    def __init__(self, message: str):
+        self.message = message
+        "Message we want to send to our chat."
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, ChatMessageEvent) and self.message == other.message
+
+class RedShell(Event):
+    """
+    Event used to to prime red trap.
     """
 
     def __init__(self, message: str):
@@ -601,7 +624,7 @@ class Bot_one(commands.Bot):
         self.event_stream = event_stream
         self.channel_point_handlers:Dict[str,Callable] = {
             perfect_lurker_channel_id: self.lurker_joins_race,
-            yellow_channel_point: self.yellow_trap}
+            yellow_channel_point: self.yellow_trap, red_chanel_point: self.red_trap}
 
     async def event_pubsub_channel_points(self, event: pubsub.PubSubChannelPointsMessage):
         if event.user.name is None:
@@ -623,7 +646,13 @@ class Bot_one(commands.Bot):
         self.lurker_gang.add(new_lurker)
         return new_lurker
 
-    #channelpoint for talking
+    #channel point for red shell
+    async def red_trap(self, event: pubsub.PubSubChannelPointsMessage):
+        if event.user.name is None:
+            return
+        channel_point_lurker= await self.create_lurker(event.user.name) 
+
+    #channelpoint for yellow trap
     async def yellow_trap(self, event: pubsub.PubSubChannelPointsMessage):  
         if event.user.name is None:
             return 
