@@ -22,9 +22,9 @@ perfect_lurker_channel_id="a374b031-d275-4660-9755-9a9977e7f3ae"
 talking_lurker_id="d229fa01-0b61-46e7-9c3c-a1110a7d03d4"
 all_viewers ="All_Viewers.txt"
 yellow_channel_point = 'bb5f96f3-714d-4b09-9203-9b698a97aa7f'
-red_chanel_point = ''
-blue_chanel_point = ''
-shield_chanel_point = ''
+red_chanel_point = 'c72d18f9-4bbf-4b9d-8839-55c49042c22d'
+blue_chanel_point = '6faf803c-b051-4533-b86a-95a5955eace3'
+shield_chanel_point = '67313597-0928-46e8-97d3-f7241ec778ed'
 
 
 #type of attacks

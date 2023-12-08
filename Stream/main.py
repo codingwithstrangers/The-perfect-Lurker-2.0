@@ -23,9 +23,9 @@ log.setLevel(logging.INFO)
 perfect_lurker_channel_id="a374b031-d275-4660-9755-9a9977e7f3ae"
 talking_lurker_id="d229fa01-0b61-46e7-9c3c-a1110a7d03d4"
 yellow_channel_point = 'bb5f96f3-714d-4b09-9203-9b698a97aa7f'
-red_chanel_point = ''
-blue_chanel_point = ''
-shield_chanel_point = ''
+red_chanel_point = 'c72d18f9-4bbf-4b9d-8839-55c49042c22d'
+blue_chanel_point = '6faf803c-b051-4533-b86a-95a5955eace3'
+shield_chanel_point = '67313597-0928-46e8-97d3-f7241ec778ed'
 
 all_viewers ="All_Viewers.txt"
 
@@ -111,6 +111,7 @@ hit_lurkers are identified in the lurker_gang"""
             iterations=1,
         )(one_time_send).start()
 
+    #We want to geth the names of the lurkers
 
 event_separator = ","
 "how our event code and values are separated in our websocket packets"
@@ -296,8 +297,10 @@ class TalkingLurkerEvent(LurkerEvent):
 class TalkingChannelPointEvent(LurkerEvent):
     '''This is the event to sent a notice of a lurker talking_lurker_id
     butt they are using a channel point'''
-
-
+class RedShellChannelPointEvent(LurkerEvent):
+    ''' This event will be used to prime the redshell for attack once a lurker uses a c
+    channel point aka red shell
+    '''
 class LeaveRaceAttemptedEvent(LurkerEvent):
     """
     Event used when a chatter attempts to leave the race
@@ -332,7 +335,8 @@ class LurkerGang:
         event_stream.add_consumer(self._on_join_attempt)
         event_stream.add_consumer(self._on_leave_attempt)
         event_stream.add_consumer(self._on_talking_lurker)
-        # event_stream.add_consumer(self._on_talking_channel_point)
+        event_stream.add_consumer(self._on_red_shell_channel_point)
+        
 
     def __getitem__(self, key: str) -> Optional[Lurker]:
         return self._lurkers.get(key.lower())
@@ -368,11 +372,6 @@ class LurkerGang:
             return
         await lurk.leave_race(self._event_stream)
 
-    # async def _on_talking_channel_point(self, ev: TalkingChannelPointEvent):
-    #     lurk = self[ev.user_name]
-    #     if not lurk:
-    #         return 
-    #     await lurk.add_points(self._event_stream, 1)
 
     #the test for TDD we want this match up with the right with the least amount of code
     def lurkers_in_front_of(self, attacking_lurker: Lurker) -> List[Lurker]:
@@ -385,6 +384,27 @@ class LurkerGang:
             
         return [attacking_lurker]
     
+    async def _on_red_shell_channel_point(self, ev:RedShellChannelPointEvent):
+        lurk = self[ev.user_name]
+        if not lurk:
+            return
+        # await lurker_gang.lurkers_in_front_of()
+        # for lurker_gang.lurkers_in_front_of([]) in:
+        lurker_infront= self.lurkers_in_front_of(lurk)
+        for target_lurker in lurker_infront:
+            if target_lurker == ev:
+                await self._event_stream.send(
+                        ChatMessageEvent(
+                            f"@{ev.user_name} What are you doing hitting your own trap coding32Really "
+                        )
+                    )
+            else:    
+                await self._event_stream.send(
+                        ChatMessageEvent(
+                            f"@{target_lurker.user_name} LOOK OUT, @{ev.user_name} coding32Tazer3 HAS THEIR RED SHELL AIMED AT YOU!!"
+                        )
+                    )
+
         
 class SocketEvent(Event):
     """
@@ -428,7 +448,7 @@ class ChatMessageEvent(Event):
 
 class RedShell(Event):
     """
-    Event used to to prime red trap.
+    Event used to to prime red trap, and send a message to chat alerting users.
     """
 
     def __init__(self, message: str):
@@ -473,7 +493,6 @@ class SetPointsEvent(SocketEvent):
         self.points = points
         "Current points of our lurker"
 
-
 class DropBananaEvent(SocketEvent):
     def __init__(self, lurker: "Lurker"):
         one_position_back = (lurker.position + 59) % 60
@@ -495,6 +514,7 @@ class HitBananaEvent(SocketEvent):
         "Lurker who dropped the banana, may by the same as hit_lurker"
         self.position = position
         "Where the banana was dropped on the field"
+
  
 # class ChannelPointForTalkingLurkers(SocketEvent):
 #     def __init__(self, ]):
@@ -650,7 +670,8 @@ class Bot_one(commands.Bot):
     async def red_trap(self, event: pubsub.PubSubChannelPointsMessage):
         if event.user.name is None:
             return
-        channel_point_lurker= await self.create_lurker(event.user.name) 
+        await self.create_lurker(event.user.name)
+        await self.event_stream.send(RedShellChannelPointEvent(event.user.name))
 
     #channelpoint for yellow trap
     async def yellow_trap(self, event: pubsub.PubSubChannelPointsMessage):  
