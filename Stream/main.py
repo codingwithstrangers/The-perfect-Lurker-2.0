@@ -1,4 +1,5 @@
 import pprint
+import random
 import functools
 from collections.abc import Iterator, Awaitable
 from typing import Callable, List, Optional, Dict, Tuple,TypeVar
@@ -102,7 +103,7 @@ class EventStream:
     """ This is a delay function that will be uses to make Red shells and Blue Shell delay after the 
 hit_lurkers are identified in the lurker_gang"""
 
-    async def delay_events(self, ev: Event, delay: int):
+    def delay_events(self, ev: Event, delay: int):
         async def one_time_send():
             await self.send(ev)
         routines.routine(
@@ -306,6 +307,43 @@ class LeaveRaceAttemptedEvent(LurkerEvent):
     Event used when a chatter attempts to leave the race
     """
 
+class SocketEvent(Event):
+    """
+    Base class of any socket event that occurs in our system.
+    Socket events are ones where we expect to send this value over a websocket
+    to any downstream listener.
+    """
+
+    def __init__(self, code: int, values: List[str]):
+        """
+        Create a new event with a code and some values.
+        In most cases you would likely be creating an event using an inherited class.
+        """
+
+        self.code = code
+        "A unique numbered code for each event for indexing."
+        self.values = values
+        "Any extra values for each event such as lurker name, unique per event."
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, SocketEvent) and self.packet() == other.packet()
+
+    def packet(self) -> str:
+        """
+        Stringified representation of our event data that will be sent as a web socket packet.
+        """
+        return event_separator.join([str(self.code), *self.values])
+
+class HitRedShellEvent(SocketEvent):
+    def __init__(self,hit_lurker: "Lurker", attack_lurker: "Lurker"):
+        super().__init__(
+            6, [ hit_lurker.user_name, attack_lurker.user_name]
+        )
+        self.hit_lurker = hit_lurker
+        "Lurker who got hit by the redshell"
+        self.attack_lurker = attack_lurker
+        "Lurker who sent redshell, maybe by the same as hit_lurker"
+
 class LurkerGang:
     """
     Track our lurkers in a single collection.
@@ -336,6 +374,7 @@ class LurkerGang:
         event_stream.add_consumer(self._on_leave_attempt)
         event_stream.add_consumer(self._on_talking_lurker)
         event_stream.add_consumer(self._on_red_shell_channel_point)
+        event_stream.add_consumer(self._on_delay_hit_redshell)
         
 
     def __getitem__(self, key: str) -> Optional[Lurker]:
@@ -392,6 +431,7 @@ class LurkerGang:
         # for lurker_gang.lurkers_in_front_of([]) in:
         lurker_infront= self.lurkers_in_front_of(lurk)
         for target_lurker in lurker_infront:
+            self._event_stream.delay_events(HitRedShellEvent(target_lurker,lurk), delay= random.randint(6,10)) 
             if target_lurker == ev:
                 await self._event_stream.send(
                         ChatMessageEvent(
@@ -404,34 +444,28 @@ class LurkerGang:
                             f"@{target_lurker.user_name} LOOK OUT, @{ev.user_name} coding32Tazer3 HAS THEIR RED SHELL AIMED AT YOU!!"
                         )
                     )
+                
+    async def _on_delay_hit_redshell(self, ev: HitRedShellEvent):
+        #if you hit your self in defense you lose 2 points
+        #if you hit your self solo you lose3
+        # the attack can happen, and meessage can be sent 
+        if ev.attack_lurker == ev.hit_lurker:
+            await ev.attack_lurker.add_points(self._event_stream, -3)
+            await self._event_stream.send(
+                        ChatMessageEvent(
+                            f"@{ev.attack_lurker.user_name} Really wasting points on hitting yourself? coding32Really "
+                        )
+                    )   
+        else:
+            await ev.hit_lurker.add_points(self._event_stream, -2)
+            await self._event_stream.send(
+                            ChatMessageEvent(
+                                f"@{ev.attack_lurker.user_name} coding32Tazer3 Just Ran Yo POCKETS!!! @{ev.hit_lurker.user_name} "
+                            )
+                        )   
 
         
-class SocketEvent(Event):
-    """
-    Base class of any socket event that occurs in our system.
-    Socket events are ones where we expect to send this value over a websocket
-    to any downstream listener.
-    """
 
-    def __init__(self, code: int, values: List[str]):
-        """
-        Create a new event with a code and some values.
-        In most cases you would likely be creating an event using an inherited class.
-        """
-
-        self.code = code
-        "A unique numbered code for each event for indexing."
-        self.values = values
-        "Any extra values for each event such as lurker name, unique per event."
-
-    def __eq__(self, other: object) -> bool:
-        return isinstance(other, SocketEvent) and self.packet() == other.packet()
-
-    def packet(self) -> str:
-        """
-        Stringified representation of our event data that will be sent as a web socket packet.
-        """
-        return event_separator.join([str(self.code), *self.values])
 
 
 class ChatMessageEvent(Event):
@@ -446,17 +480,6 @@ class ChatMessageEvent(Event):
     def __eq__(self, other: object) -> bool:
         return isinstance(other, ChatMessageEvent) and self.message == other.message
 
-class RedShell(Event):
-    """
-    Event used to to prime red trap, and send a message to chat alerting users.
-    """
-
-    def __init__(self, message: str):
-        self.message = message
-        "Message we want to send to our chat."
-
-    def __eq__(self, other: object) -> bool:
-        return isinstance(other, ChatMessageEvent) and self.message == other.message
 
 
 class JoinedRaceEvent(SocketEvent):
@@ -515,6 +538,9 @@ class HitBananaEvent(SocketEvent):
         self.position = position
         "Where the banana was dropped on the field"
 
+
+            
+
  
 # class ChannelPointForTalkingLurkers(SocketEvent):
 #     def __init__(self, ]):
@@ -555,7 +581,7 @@ class Field:
                 del self._bananas[ev.lurker.position]
                 
             if ev.lurker == attacking_lurker:
-                log.info("lurker %s hit there own banana", ev.lurker.user_name)
+                log.info("lurker %s hit there own trap", ev.lurker.user_name)
                 await ev.lurker.add_points(self._event_stream, -2)
                 await self._event_stream.send(
                     HitBananaEvent(ev.lurker.position, ev.lurker, ev.lurker)
@@ -567,7 +593,7 @@ class Field:
                 )
             else:
                 log.info(
-                    "lurker %s hit %s's banana",
+                    "lurker %s hit %s's yellow trap",
                     ev.lurker.user_name,
                     attacking_lurker.user_name,
                 )
@@ -577,7 +603,7 @@ class Field:
                 )
                 await self._event_stream.send(
                     ChatMessageEvent(
-                        f"@{ev.lurker.user_name} hit the banana set by @{attacking_lurker.user_name}"
+                        f"@{ev.lurker.user_name} hit the yellow trap set by @{attacking_lurker.user_name}"
                     )
                 )
 
@@ -759,7 +785,7 @@ if __name__ == '__main__':
     field= Field(lurker_gang,event_stream)
     bot = Bot_one(lurker_gang,event_stream)
     point_partial = functools.partial(point_timer,lurker_gang,event_stream)
-    routines.routine(seconds=60)(point_partial).start()
+    routines.routine(seconds=10)(point_partial).start()
     lurker_task_made = bot.loop.create_task(bot.run())
     task_for_botgodot = bot.loop.create_task(bot.pytogodot())
     gather_both_task = asyncio.gather(lurker_task_made)
