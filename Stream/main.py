@@ -1,5 +1,6 @@
 import pprint
 import random
+import time
 import functools
 from collections.abc import Iterator, Awaitable
 from typing import Callable, List, Optional, Dict, Tuple,TypeVar
@@ -328,11 +329,15 @@ class SocketEvent(Event):
     def __eq__(self, other: object) -> bool:
         return isinstance(other, SocketEvent) and self.packet() == other.packet()
 
+    def __str__(self) -> str:
+        return self.packet()
+
     def packet(self) -> str:
         """
         Stringified representation of our event data that will be sent as a web socket packet.
         """
         return event_separator.join([str(self.code), *self.values])
+    
 
 class HitRedShellEvent(SocketEvent):
     def __init__(self,hit_lurker: "Lurker", attack_lurker: "Lurker"):
@@ -488,7 +493,7 @@ class JoinedRaceEvent(SocketEvent):
     """
 
     def __init__(self, lurker: "Lurker"):
-        super().__init__(1, [lurker.user_name])
+        super().__init__(1, [lurker.user_name,lurker.image_url])
         self.lurker = lurker
         "Lurker who joined the race"
 
@@ -645,7 +650,7 @@ class Field:
                 )
                 await self._event_stream.send(
                     ChatMessageEvent(
-                        f"@{lurker.user_name} hit the banana just set by @{ev.lurker.user_name}"
+                        f"@{lurker.user_name} hit the trap set by @{ev.lurker.user_name}"
                     )
                 )
                 return
@@ -656,12 +661,30 @@ class Field:
             self._bananas[ev.position] = []
         self._bananas[ev.position].append(ev.lurker)
 
-
+class ConsumerForGodot():
+    def __init__(self, event_stream:EventStream):
+        event_stream.add_consumer(self.consume_godot_events)
+    async def hello(self, websocket:WebSocketServerProtocol):
+        self.websocket = websocket
+        
+        while True:
+            time.sleep(60)
     
+    async def create_task(self):
+        async with serve(self.hello, "localhost", 8766):
+            await asyncio.Future() #run forever
+
+    async def consume_godot_events(self, event: SocketEvent):
+        await self.websocket.send(event.packet())
+
+   # run forever
+        
+    
+
 
 class Bot_one(commands.Bot):
     def __init__(self,lurker_gang: LurkerGang, event_stream:EventStream):
-        super().__init__(token= USER_TOKEN , prefix='!', initial_channels=['codingwithstrangers'],
+        super().__init__(client_secret= CLIENT_SECRET, token= USER_TOKEN , prefix='!', initial_channels=['codingwithstrangers'],
             nick = "Perfect_Lurker",)
         
         event_stream.add_consumer(self.consume_chat_message)
@@ -721,6 +744,8 @@ class Bot_one(commands.Bot):
         channel= self.connected_channels[0]
         await channel.send(event.message)
 
+    
+
       
     #leave race
     @commands.command()
@@ -759,10 +784,7 @@ class Bot_one(commands.Bot):
             return 
         for lurker in self.lurker_gang:
             print(lurker)
-        
-    async def pytogodot(self):
-        async with serve(self.register, "localhost", 8765):
-            await self.send_messages()  # run forever
+
 
     #last function
     async def run(self):
@@ -787,6 +809,7 @@ if __name__ == '__main__':
     point_partial = functools.partial(point_timer,lurker_gang,event_stream)
     routines.routine(seconds=10)(point_partial).start()
     lurker_task_made = bot.loop.create_task(bot.run())
-    task_for_botgodot = bot.loop.create_task(bot.pytogodot())
-    gather_both_task = asyncio.gather(lurker_task_made)
+    godot_bot = ConsumerForGodot(event_stream)
+    task_for_botgodot = bot.loop.create_task(godot_bot.create_task())
+    gather_both_task = asyncio.gather(lurker_task_made, task_for_botgodot)
     bot.loop.run_until_complete(gather_both_task)
