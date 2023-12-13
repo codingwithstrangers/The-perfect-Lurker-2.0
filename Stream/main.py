@@ -587,10 +587,10 @@ class Field:
                 
             if ev.lurker == attacking_lurker:
                 log.info("lurker %s hit there own trap", ev.lurker.user_name)
-                await ev.lurker.add_points(self._event_stream, -2)
                 await self._event_stream.send(
                     HitBananaEvent(ev.lurker.position, ev.lurker, ev.lurker)
                 )
+                await ev.lurker.add_points(self._event_stream, -2)
                 await self._event_stream.send(
                     ChatMessageEvent(
                         f"@{ev.lurker.user_name} What are you doing hitting your own trap "
@@ -602,10 +602,10 @@ class Field:
                     ev.lurker.user_name,
                     attacking_lurker.user_name,
                 )
-                await ev.lurker.add_points(self._event_stream, -1)
                 await self._event_stream.send(
                     HitBananaEvent(ev.lurker.position, ev.lurker, attacking_lurker)
                 )
+                await ev.lurker.add_points(self._event_stream, -1)
                 await self._event_stream.send(
                     ChatMessageEvent(
                         f"@{ev.lurker.user_name} hit the yellow trap set by @{attacking_lurker.user_name}"
@@ -668,7 +668,7 @@ class ConsumerForGodot():
         self.websocket = websocket
         
         while True:
-            time.sleep(60)
+            await asyncio.sleep(60)
     
     async def create_task(self):
         async with serve(self.hello, "localhost", 8766):
@@ -684,7 +684,7 @@ class ConsumerForGodot():
 
 class Bot_one(commands.Bot):
     def __init__(self,lurker_gang: LurkerGang, event_stream:EventStream):
-        super().__init__(client_secret= CLIENT_SECRET, token= USER_TOKEN , prefix='!', initial_channels=['codingwithstrangers'],
+        super().__init__(client_secret=CLIENT_SECRET, token= USER_TOKEN , prefix='!', initial_channels=['codingwithstrangers'],
             nick = "Perfect_Lurker",)
         
         event_stream.add_consumer(self.consume_chat_message)
@@ -752,7 +752,7 @@ class Bot_one(commands.Bot):
     async def kick(self, ctx: commands.Context, user: twitchio.PartialChatter):
         if ctx.author.is_broadcaster:
             await self.event_stream.send(LeaveRaceAttemptedEvent(user.name))    
-
+    @commands.command()
     async def remove(self, ctx: commands.Context):
         if ctx.author.name is None:
             return
