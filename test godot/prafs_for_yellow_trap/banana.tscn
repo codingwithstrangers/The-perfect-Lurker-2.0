@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://djy5cuvcfd83j"]
+
+[ext_resource type="Texture2D" uid="uid://dnk60gr2jlmts" path="res://yellow_trap/yellow attack.png" id="1_216vi"]
+
+[node name="Node2D" type="PathFollow2D"]
+rotates = false
+
+[node name="AnimatedSprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.2, 0.2)
+texture = ExtResource("1_216vi")

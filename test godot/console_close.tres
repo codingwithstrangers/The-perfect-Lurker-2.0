@@ -1,0 +1,6 @@
+[gd_resource type="InputEventKey" format=3 uid="uid://itvmn5f4mn0y"]
+
+[resource]
+device = -1
+pressed = true
+keycode = 4194305

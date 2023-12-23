@@ -1,0 +1,57 @@
+[gd_scene load_steps=11 format=3 uid="uid://45m8cy7jyqxj"]
+
+[ext_resource type="Texture2D" uid="uid://c2cvqvh1bbc8q" path="res://yellow_trap/soap txt/soap/frame0000.png" id="1_pkf5v"]
+[ext_resource type="Texture2D" uid="uid://rn4iuwhd22c5" path="res://yellow_trap/soap txt/soap/frame0004.png" id="2_dlywk"]
+[ext_resource type="Texture2D" uid="uid://byl2x6h5secih" path="res://yellow_trap/soap txt/soap/frame0008.png" id="3_3xdjn"]
+[ext_resource type="Texture2D" uid="uid://cne2inb35psdy" path="res://yellow_trap/soap txt/soap/frame0010.png" id="4_sy0wj"]
+[ext_resource type="Texture2D" uid="uid://cscj8g5l1jogr" path="res://yellow_trap/soap txt/soap/frame0012.png" id="5_vunu7"]
+[ext_resource type="Texture2D" uid="uid://dy7abc5johuvd" path="res://yellow_trap/soap txt/soap/frame0014.png" id="6_flp2s"]
+[ext_resource type="Texture2D" uid="uid://bph65mxy5yk8e" path="res://yellow_trap/soap txt/soap/frame0016.png" id="7_xxenn"]
+[ext_resource type="Texture2D" uid="uid://bfnxq044keeop" path="res://yellow_trap/soap txt/soap/frame0018.png" id="8_6hbrv"]
+[ext_resource type="Texture2D" uid="uid://cxc2fe6m8ose6" path="res://yellow_trap/soap txt/soap/frame0020.png" id="9_xrk4n"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_w5r0k"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_pkf5v")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_dlywk")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_3xdjn")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_sy0wj")
+}, {
+"duration": 1.0,
+"texture": ExtResource("5_vunu7")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_flp2s")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_xxenn")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_6hbrv")
+}, {
+"duration": 1.0,
+"texture": ExtResource("9_xrk4n")
+}],
+"loop": true,
+"name": &"run",
+"speed": 5.0
+}]
+
+[node name="Node2D" type="PathFollow2D"]
+rotates = false
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+scale = Vector2(0.2, 0.2)
+sprite_frames = SubResource("SpriteFrames_w5r0k")
+animation = &"run"
+autoplay = "run"
+frame_progress = 0.503043
+speed_scale = 0.5

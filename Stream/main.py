@@ -339,10 +339,18 @@ class SocketEvent(Event):
         return event_separator.join([str(self.code), *self.values])
     
 
+class DropRedShellEvent(SocketEvent):
+    def __init__(self,attack_lurker: "Lurker", hit_lurker: "Lurker", red_delay: int):
+        super().__init__(
+            6, [ attack_lurker.user_name, attack_lurker.points, hit_lurker.user_name, hit_lurker.points,red_delay]
+        )
+        self.attack_lurker = attack_lurker
+        "Lurker who sent redshell, maybe by the same as hit_lurker"
+
 class HitRedShellEvent(SocketEvent):
     def __init__(self,hit_lurker: "Lurker", attack_lurker: "Lurker"):
         super().__init__(
-            6, [ hit_lurker.user_name, attack_lurker.user_name]
+            7, [ hit_lurker.user_name, hit_lurker.points, attack_lurker.user_name, attack_lurker.points]
         )
         self.hit_lurker = hit_lurker
         "Lurker who got hit by the redshell"
@@ -436,7 +444,9 @@ class LurkerGang:
         # for lurker_gang.lurkers_in_front_of([]) in:
         lurker_infront= self.lurkers_in_front_of(lurk)
         for target_lurker in lurker_infront:
-            self._event_stream.delay_events(HitRedShellEvent(target_lurker,lurk), delay= random.randint(6,10)) 
+            red_delay = random.randint(6,10)
+            self._event_stream.send(DropRedShellEvent(lurk, target_lurker,red_delay))
+            self._event_stream.delay_events(HitRedShellEvent(target_lurker,lurk),red_delay)
             if target_lurker == ev:
                 await self._event_stream.send(
                         ChatMessageEvent(
@@ -543,15 +553,6 @@ class HitBananaEvent(SocketEvent):
         self.position = position
         "Where the banana was dropped on the field"
 
-
-            
-
- 
-# class ChannelPointForTalkingLurkers(SocketEvent):
-#     def __init__(self, ]):
-#         super().__init__(code, values)\
-
-# The field
 class Field:
     """
     Field manages any race wide events such as items dropped.
@@ -720,7 +721,16 @@ class Bot_one(commands.Bot):
         if event.user.name is None:
             return
         await self.create_lurker(event.user.name)
+        channel_point_lurker= await self.create_lurker(event.user.name)
+        # if channel_point_lurker.in_race:
         await self.event_stream.send(RedShellChannelPointEvent(event.user.name))
+        # else:
+        #     not channel_point_lurker.in_race
+        #     await self.event_stream.send(
+        #                 ChatMessageEvent(
+        #                     f"@{event.user.name} You are wasting your points, join the race first coding32Really "
+        #                 )
+        #             )   
 
     #channelpoint for yellow trap
     async def yellow_trap(self, event: pubsub.PubSubChannelPointsMessage):  
@@ -728,7 +738,16 @@ class Bot_one(commands.Bot):
             return 
 
         channel_point_lurker= await self.create_lurker(event.user.name)
-        await self.event_stream.send(DropBananaEvent(channel_point_lurker))
+        if channel_point_lurker:
+            await self.event_stream.send(DropBananaEvent(channel_point_lurker))
+
+        else:
+            await self.event_stream.send(
+                        ChatMessageEvent(
+                            f"@{event.user.name} You are wasting your points, join the race first coding32Really "
+                        )
+                    )   
+
         
         
     #message for joining race
@@ -743,8 +762,6 @@ class Bot_one(commands.Bot):
     async def consume_chat_message(self,event: ChatMessageEvent):
         channel= self.connected_channels[0]
         await channel.send(event.message)
-
-    
 
       
     #leave race
@@ -797,8 +814,13 @@ class Bot_one(commands.Bot):
         await self.start()
 
 async def point_timer(lurker_gang: LurkerGang, event_stream: EventStream):
+    #open text file 
+    with open (all_viewers, 'r') as file:
+        all_viewers_list =file.read().splitlines()
+
     for lurk in lurker_gang:
-        await lurk.add_points(event_stream, delta=1)
+        if lurk.user_name in all_viewers_list:
+            await lurk.add_points(event_stream, delta=1)
 
 #this is an entry point, that wires everything together and make sure it reads this file directly 
 if __name__ == '__main__':

@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://b78v7c4b6kteg"]
+
+[ext_resource type="Texture2D" uid="uid://dfwer37l1j1oa" path="res://yellow_trap/lurker images.png" id="1_wsr1m"]
+
+[node name="Node2D" type="PathFollow2D"]
+rotates = false
+
+[node name="AnimatedSprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.2, 0.2)
+texture = ExtResource("1_wsr1m")

@@ -1,0 +1,15 @@
+[gd_scene load_steps=5 format=3 uid="uid://dgsktd7seu463"]
+
+[ext_resource type="Texture2D" uid="uid://bahcpiaydfsfu" path="res://red_trap/back_red_shell.png" id="1_tqj6q"]
+[ext_resource type="Texture2D" uid="uid://dhss0u1mcsbi" path="res://red_trap/front_redshell.png" id="2_0j25c"]
+[ext_resource type="Script" path="res://scripts/red shell.gd" id="2_8xab8"]
+[ext_resource type="Texture2D" uid="uid://dfcwrtsr71lcc" path="res://red_trap/left_right_redshell.png" id="3_ucijy"]
+
+[node name="Node2D" type="PathFollow2D"]
+rotates = false
+
+[node name="AnimatedSprite2D_back" type="Sprite2D" parent="."]
+scale = Vector2(0.2, 0.2)
+texture = ExtResource("3_ucijy")
+script = ExtResource("2_8xab8")
+shell_images = Array[Texture2D]([ExtResource("3_ucijy"), ExtResource("1_tqj6q"), ExtResource("3_ucijy"), ExtResource("2_0j25c")])

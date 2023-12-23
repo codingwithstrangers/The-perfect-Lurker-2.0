@@ -1,0 +1,76 @@
+[gd_scene load_steps=13 format=3 uid="uid://dinrtu73ee2hk"]
+
+[ext_resource type="Texture2D" uid="uid://df7sdbvio44nu" path="res://minimap base.png" id="2_i4xkd"]
+[ext_resource type="Script" path="res://scripts/2DViewport.gd" id="2_vn48d"]
+[ext_resource type="Script" path="res://scripts/drop_yellow_trap.gd" id="3_rure0"]
+[ext_resource type="PackedScene" uid="uid://b78v7c4b6kteg" path="res://prafs_for_yellow_trap/cucumber.tscn" id="4_o6akm"]
+[ext_resource type="PackedScene" uid="uid://45m8cy7jyqxj" path="res://prafs_for_yellow_trap/soap_prefab.tscn" id="5_eakdi"]
+[ext_resource type="Script" path="res://scripts/consolereader.gd" id="5_rs3wv"]
+[ext_resource type="PackedScene" uid="uid://dobl2uiytylqt" path="res://prafs_for_yellow_trap/draft_for_prefab.tscn" id="6_nem3q"]
+[ext_resource type="PackedScene" uid="uid://dgsktd7seu463" path="res://prefab_red_trap/red shell.tscn" id="7_fkrl3"]
+[ext_resource type="Script" path="res://scripts/EventDispatcher.gd" id="9_cgnbg"]
+[ext_resource type="Script" path="res://scripts/red shell.gd" id="10_k5nkn"]
+[ext_resource type="Script" path="res://scripts/websocket2.gd" id="11_qlqi2"]
+
+[sub_resource type="Curve2D" id="Curve2D_quyhw"]
+_data = {
+"points": PackedVector2Array(0, 0, 0, 0, 146, 207, 0, 0, 0, 0, 142, 821, 0, 0, 0, 0, 997, 823, 0, 0, 0, 0, 996, 207, 0, 0, 0, 0, 146, 207)
+}
+point_count = 5
+
+[node name="Node2D" type="Node"]
+
+[node name="MinimapBase" type="Sprite2D" parent="."]
+position = Vector2(571, 508)
+scale = Vector2(1.18875, 1.18875)
+texture = ExtResource("2_i4xkd")
+
+[node name="2DViewport trap manager" type="Node2D" parent="." node_paths=PackedStringArray("event_dispatcher")]
+script = ExtResource("2_vn48d")
+event_dispatcher = NodePath("../EventDispatcher")
+
+[node name="Path2D_yellow" type="Path2D" parent="2DViewport trap manager" node_paths=PackedStringArray("event_dispatcher")]
+curve = SubResource("Curve2D_quyhw")
+script = ExtResource("3_rure0")
+event_dispatcher = NodePath("../../EventDispatcher")
+yellow_trap = Array[PackedScene]([ExtResource("5_eakdi"), ExtResource("4_o6akm"), ExtResource("6_nem3q")])
+red_trap = Array[PackedScene]([ExtResource("7_fkrl3")])
+
+[node name="Node2D" parent="2DViewport trap manager/Path2D_yellow" instance=ExtResource("7_fkrl3")]
+position = Vector2(722.927, 822.359)
+progress = 1194.94
+
+[node name="UIViewport" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="BoxContainer" type="BoxContainer" parent="UIViewport"]
+visible = false
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 372.0
+grow_horizontal = 2
+
+[node name="TextEdit" type="TextEdit" parent="UIViewport/BoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ConsoleWatcher" type="Node2D" parent="UIViewport"]
+script = ExtResource("5_rs3wv")
+
+[node name="EventDispatcher" type="Node" parent="."]
+script = ExtResource("9_cgnbg")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+script = ExtResource("10_k5nkn")
+
+[node name="websocket2" type="Sprite2D" parent="."]
+
+[node name="WebSocket" type="Node" parent="." node_paths=PackedStringArray("event_dispatcher")]
+script = ExtResource("11_qlqi2")
+event_dispatcher = NodePath("../EventDispatcher")
