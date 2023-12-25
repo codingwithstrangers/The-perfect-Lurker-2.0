@@ -342,7 +342,7 @@ class SocketEvent(Event):
 class DropRedShellEvent(SocketEvent):
     def __init__(self,attack_lurker: "Lurker", hit_lurker: "Lurker", red_delay: int):
         super().__init__(
-            6, [ attack_lurker.user_name, attack_lurker.points, hit_lurker.user_name, hit_lurker.points,red_delay]
+            6, [ attack_lurker.user_name, str(attack_lurker.points), hit_lurker.user_name, str(hit_lurker.points),str(red_delay)]
         )
         self.attack_lurker = attack_lurker
         "Lurker who sent redshell, maybe by the same as hit_lurker"
@@ -350,7 +350,7 @@ class DropRedShellEvent(SocketEvent):
 class HitRedShellEvent(SocketEvent):
     def __init__(self,hit_lurker: "Lurker", attack_lurker: "Lurker"):
         super().__init__(
-            7, [ hit_lurker.user_name, hit_lurker.points, attack_lurker.user_name, attack_lurker.points]
+            7, [ hit_lurker.user_name, str(hit_lurker.points), attack_lurker.user_name,str(attack_lurker.points)]
         )
         self.hit_lurker = hit_lurker
         "Lurker who got hit by the redshell"
@@ -445,7 +445,7 @@ class LurkerGang:
         lurker_infront= self.lurkers_in_front_of(lurk)
         for target_lurker in lurker_infront:
             red_delay = random.randint(6,10)
-            self._event_stream.send(DropRedShellEvent(lurk, target_lurker,red_delay))
+            await self._event_stream.send(DropRedShellEvent(lurk, target_lurker,red_delay))
             self._event_stream.delay_events(HitRedShellEvent(target_lurker,lurk),red_delay)
             if target_lurker == ev:
                 await self._event_stream.send(

@@ -1,16 +1,23 @@
-[gd_scene load_steps=13 format=3 uid="uid://dinrtu73ee2hk"]
+[gd_scene load_steps=20 format=3 uid="uid://cfmqljf8j0r1b"]
 
+[ext_resource type="Script" path="res://scripts/Trap_Event_Handler.gd" id="2_7rgno"]
 [ext_resource type="Texture2D" uid="uid://df7sdbvio44nu" path="res://minimap base.png" id="2_i4xkd"]
-[ext_resource type="Script" path="res://scripts/2DViewport.gd" id="2_vn48d"]
-[ext_resource type="Script" path="res://scripts/drop_yellow_trap.gd" id="3_rure0"]
 [ext_resource type="PackedScene" uid="uid://b78v7c4b6kteg" path="res://prafs_for_yellow_trap/cucumber.tscn" id="4_o6akm"]
 [ext_resource type="PackedScene" uid="uid://45m8cy7jyqxj" path="res://prafs_for_yellow_trap/soap_prefab.tscn" id="5_eakdi"]
 [ext_resource type="Script" path="res://scripts/consolereader.gd" id="5_rs3wv"]
 [ext_resource type="PackedScene" uid="uid://dobl2uiytylqt" path="res://prafs_for_yellow_trap/draft_for_prefab.tscn" id="6_nem3q"]
 [ext_resource type="PackedScene" uid="uid://dgsktd7seu463" path="res://prefab_red_trap/red shell.tscn" id="7_fkrl3"]
 [ext_resource type="Script" path="res://scripts/EventDispatcher.gd" id="9_cgnbg"]
+[ext_resource type="InputEventKey" uid="uid://beb46skehvoh7" path="res://console_open.tres" id="9_vu3vp"]
+[ext_resource type="InputEventKey" uid="uid://itvmn5f4mn0y" path="res://console_close.tres" id="10_3fc0q"]
 [ext_resource type="Script" path="res://scripts/red shell.gd" id="10_k5nkn"]
+[ext_resource type="InputEventKey" uid="uid://b0yxdui1xynne" path="res://console_send.tres" id="11_lw1xk"]
 [ext_resource type="Script" path="res://scripts/websocket2.gd" id="11_qlqi2"]
+[ext_resource type="Script" path="res://scripts/Lurker_Event_Handler.gd" id="14_0408o"]
+[ext_resource type="Script" path="res://crowns.gd" id="15_q4cya"]
+[ext_resource type="Texture2D" uid="uid://doiedhrg31vww" path="res://crowns/gold.png" id="16_c3ha5"]
+[ext_resource type="Texture2D" uid="uid://by48x6kchn3vv" path="res://crowns/silver.png" id="17_n16bw"]
+[ext_resource type="Texture2D" uid="uid://cmj1nshesftbr" path="res://crowns/100bronze.png" id="18_xb6m1"]
 
 [sub_resource type="Curve2D" id="Curve2D_quyhw"]
 _data = {
@@ -25,20 +32,9 @@ position = Vector2(571, 508)
 scale = Vector2(1.18875, 1.18875)
 texture = ExtResource("2_i4xkd")
 
-[node name="2DViewport trap manager" type="Node2D" parent="." node_paths=PackedStringArray("event_dispatcher")]
-script = ExtResource("2_vn48d")
-event_dispatcher = NodePath("../EventDispatcher")
-
-[node name="Path2D_yellow" type="Path2D" parent="2DViewport trap manager" node_paths=PackedStringArray("event_dispatcher")]
+[node name="Path2D_yellow" type="Path2D" parent="."]
+unique_name_in_owner = true
 curve = SubResource("Curve2D_quyhw")
-script = ExtResource("3_rure0")
-event_dispatcher = NodePath("../../EventDispatcher")
-yellow_trap = Array[PackedScene]([ExtResource("5_eakdi"), ExtResource("4_o6akm"), ExtResource("6_nem3q")])
-red_trap = Array[PackedScene]([ExtResource("7_fkrl3")])
-
-[node name="Node2D" parent="2DViewport trap manager/Path2D_yellow" instance=ExtResource("7_fkrl3")]
-position = Vector2(722.927, 822.359)
-progress = 1194.94
 
 [node name="UIViewport" type="Control" parent="."]
 layout_mode = 3
@@ -60,13 +56,20 @@ grow_horizontal = 2
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="ConsoleWatcher" type="Node2D" parent="UIViewport"]
+[node name="ConsoleWatcher" type="Node2D" parent="UIViewport" node_paths=PackedStringArray("event_dispatcher", "console_container", "console_editor")]
 script = ExtResource("5_rs3wv")
+event_dispatcher = NodePath("../../EventDispatcher")
+console_container = NodePath("../BoxContainer")
+console_editor = NodePath("../BoxContainer/TextEdit")
+key_console_open = ExtResource("9_vu3vp")
+key_console_close = ExtResource("10_3fc0q")
+key_console_send = ExtResource("11_lw1xk")
 
 [node name="EventDispatcher" type="Node" parent="."]
 script = ExtResource("9_cgnbg")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.5, 0.5)
 script = ExtResource("10_k5nkn")
 
 [node name="websocket2" type="Sprite2D" parent="."]
@@ -74,3 +77,42 @@ script = ExtResource("10_k5nkn")
 [node name="WebSocket" type="Node" parent="." node_paths=PackedStringArray("event_dispatcher")]
 script = ExtResource("11_qlqi2")
 event_dispatcher = NodePath("../EventDispatcher")
+
+[node name="Lurker_Path" type="Node" parent="." node_paths=PackedStringArray("event_dispatcher")]
+script = ExtResource("14_0408o")
+event_dispatcher = NodePath("../EventDispatcher")
+
+[node name="Trap_path" type="Node" parent="." node_paths=PackedStringArray("event_dispatcher")]
+script = ExtResource("2_7rgno")
+event_dispatcher = NodePath("../EventDispatcher")
+yellow_trap = Array[PackedScene]([ExtResource("5_eakdi"), ExtResource("4_o6akm"), ExtResource("6_nem3q")])
+red_trap = Array[PackedScene]([ExtResource("7_fkrl3")])
+
+[node name="crowns" type="Node2D" parent="." node_paths=PackedStringArray("event_dispatcher", "gold_node", "silver_node", "bronze_node")]
+z_index = 70
+script = ExtResource("15_q4cya")
+event_dispatcher = NodePath("../EventDispatcher")
+gold_node = NodePath("Gold")
+silver_node = NodePath("Silver")
+bronze_node = NodePath("bronze")
+
+[node name="Gold" type="Sprite2D" parent="crowns"]
+z_index = 100
+rotation = 3.65123
+scale = Vector2(-0.115, -0.115)
+texture = ExtResource("16_c3ha5")
+offset = Vector2(0.035, -450)
+
+[node name="Silver" type="Sprite2D" parent="crowns"]
+z_index = 100
+position = Vector2(168.61, 168.74)
+rotation = -5.68977
+scale = Vector2(0.18, 0.18)
+texture = ExtResource("17_n16bw")
+
+[node name="bronze" type="Sprite2D" parent="crowns"]
+z_index = 100
+position = Vector2(170.035, 171.56)
+rotation = 0.593412
+scale = Vector2(0.675, 0.675)
+texture = ExtResource("18_xb6m1")

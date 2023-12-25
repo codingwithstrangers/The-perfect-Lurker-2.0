@@ -1,4 +1,4 @@
-extends Node2D
+extends Node
 @export var event_dispatcher: EventDispatcher
 
 # Called when the node enters the scene tree for the first time.
@@ -9,12 +9,11 @@ func _ready():
 #	event_dispatcher.lurker_hit_yellow_trap.connect()
 	
 func lurker_points(lurker_name: String, lurker_point: int):
-	var path_follow = get_node(lurker_name + "_follow")
+	var path_follow = %Path2D_yellow.get_node(lurker_name + "_follow")
 	path_follow.progress_ratio = lurker_point/60.0
 	
-	
 func lurker_left(lurker_name: String):
-	var remove = get_node(lurker_name + "_follow")
+	var remove = %Path2D_yellow.get_node(lurker_name + "_follow")
 	remove.queue_free()
 	
 
@@ -24,7 +23,7 @@ func lurker_join_race(lurker_name: String, image_url: String):
 	follow.name = lurker_name + "_follow"
 	var sprite = Sprite2D.new()
 	sprite.name=name
-	add_child(follow)
+	%Path2D_yellow.add_child(follow)
 	follow.add_child(sprite)
 	follow.rotates=false
 	follow.rotation = 0
@@ -51,6 +50,7 @@ func lurker_join_race(lurker_name: String, image_url: String):
 	#for every user make 2d sprite
 	load_image_into_sprite(image_url,sprite)
 	sprite.scale = Vector2(0.20,0.20)
+	sprite.z_index = 100
 	
 	
 
