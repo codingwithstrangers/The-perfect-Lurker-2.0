@@ -105,14 +105,14 @@ offset = Vector2(0.035, -450)
 
 [node name="Silver" type="Sprite2D" parent="crowns"]
 z_index = 100
-position = Vector2(168.61, 168.74)
 rotation = -5.68977
 scale = Vector2(0.18, 0.18)
 texture = ExtResource("17_n16bw")
+offset = Vector2(0, -280)
 
 [node name="bronze" type="Sprite2D" parent="crowns"]
 z_index = 100
-position = Vector2(170.035, 171.56)
 rotation = 0.593412
 scale = Vector2(0.675, 0.675)
 texture = ExtResource("18_xb6m1")
+offset = Vector2(0.085, -80)

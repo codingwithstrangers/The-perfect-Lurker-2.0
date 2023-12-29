@@ -1,6 +1,6 @@
 import pprint
 import random
-import time
+import requests
 import functools
 from collections.abc import Iterator, Awaitable
 from typing import Callable, List, Optional, Dict, Tuple,TypeVar
@@ -10,6 +10,7 @@ import twitchio
 from configuration import *
 import logging
 import asyncio
+from refresh import *
 from websockets.server import serve, WebSocketServerProtocol
 
 
@@ -830,8 +831,16 @@ if __name__ == '__main__':
     bot = Bot_one(lurker_gang,event_stream)
     point_partial = functools.partial(point_timer,lurker_gang,event_stream)
     routines.routine(seconds=10)(point_partial).start()
-    lurker_task_made = bot.loop.create_task(bot.run())
+    # lurker_task_made = bot.loop.create_task(bot.run())
+    try:
+        lurker_task_made = bot.loop.create_task(bot.run())
+    except Exception as E:
+        response = refresh_access_token( CLIENT_ID , CLIENT_SECRET)
+        access_token = response[ 'access_token' ]
+        refresh_token = response[ 'refresh_token' ]
+        bot.token = USER_TOKEN
+
     godot_bot = ConsumerForGodot(event_stream)
     task_for_botgodot = bot.loop.create_task(godot_bot.create_task())
     gather_both_task = asyncio.gather(lurker_task_made, task_for_botgodot)
-    bot.loop.run_until_complete(gather_both_task)
+    bot.loop.run_until_complete(gather_both_task)   
