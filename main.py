@@ -10,6 +10,9 @@ import twitchio
 from configuration import *
 import logging
 import asyncio
+import psutil
+import subprocess
+import schedule
 # from refresh import *
 from websockets.server import serve, WebSocketServerProtocol
 
@@ -20,7 +23,7 @@ logger = logging.getLogger("twitchio.http")
 logger.setLevel(logging.WARN)
 
 log = logging.getLogger('event_stream')
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
 
 #custom_id for channel points
 perfect_lurker_channel_id="a374b031-d275-4660-9755-9a9977e7f3ae"
@@ -814,14 +817,53 @@ class Bot_one(commands.Bot):
         print('this shit work? pt2')
         await self.start()
 
-async def point_timer(lurker_gang: LurkerGang, event_stream: EventStream):
-    #open text file 
-    with open (all_viewers, 'r') as file:
-        all_viewers_list =file.read().splitlines()
+# async def point_timer(lurker_gang: LurkerGang, event_stream: EventStream):
+#     #open text file 
+#     with open (all_viewers, 'r') as file:
+#         all_viewers_list =file.read().splitlines()
 
+#     for lurk in lurker_gang:
+#         if lurk.user_name in all_viewers_list:
+#             await lurk.add_points(event_stream, delta=1)
+async def point_timer(lurker_gang: LurkerGang, event_stream: EventStream):
+    # Username to be added
+    username_to_add = ""
+
+    # Open text file in append mode to add the new username
+    with open(all_viewers, 'a') as file:
+        file.write(username_to_add + '\n')
+
+    # Reopen the file in read mode to update the list
+    with open(all_viewers, 'r') as file:
+        all_viewers_list = file.read().splitlines()
+
+    # Iterate through the lurkers and add points if their username matches the list
     for lurk in lurker_gang:
         if lurk.user_name in all_viewers_list:
             await lurk.add_points(event_stream, delta=1)
+
+async def check_and_run():
+    # Check if viewers.py is running
+    for proc in psutil.process_iter(['pid', 'name']):
+        if proc.info['name'] == 'python' and 'viewers.py' in ' '.join(proc.cmdline()):
+            print("viewers.py is already running")
+            return
+
+    # If viewers.py is not running, start it
+    print("Starting viewers.py...")
+    await asyncio.create_subprocess_exec("python", "viewers.py")
+
+
+
+
+async def main():
+    # Schedule the job to run every hour
+    schedule.every().hour.do(await check_and_run)
+
+    # Run the scheduler loop
+    while True:
+        await schedule.run_pending()
+        await asyncio.sleep(60)  # Check every minute
 
 #this is an entry point, that wires everything together and make sure it reads this file directly 
 if __name__ == '__main__':
@@ -841,6 +883,11 @@ if __name__ == '__main__':
     #     bot.token = USER_TOKEN
 
     godot_bot = ConsumerForGodot(event_stream)
+    while True:
+        task_for_botgodot = bot.loop.create_task(godot_bot.create_task())
+        gather_both_task = asyncio.gather(lurker_task_made, task_for_botgodot)
+        bot.loop.run_until_complete(gather_both_task)
+
     task_for_botgodot = bot.loop.create_task(godot_bot.create_task())
     gather_both_task = asyncio.gather(lurker_task_made, task_for_botgodot)
     bot.loop.run_until_complete(gather_both_task)   

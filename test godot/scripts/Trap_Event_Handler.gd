@@ -47,8 +47,8 @@ func drop_red_trap(hit_lurker_name: String, hit_lurker_point: int, attack_lurker
 	#setting trap to intial position 
 	var path = %Path2D_yellow as Path2D
 	#gotta get the path running to the correct spot (load)
-	var trap_start = attack_lurker_point /60.0 
-	var trap_end = hit_lurker_point/60.0 
+	var trap_start = attack_lurker_point /60.0
+	var trap_end = hit_lurker_point/60.0
 	new_trap.progress_ratio = trap_start
 	if trap_end < trap_start:
 		trap_end+= 1

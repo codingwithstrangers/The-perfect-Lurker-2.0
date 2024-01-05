@@ -20,7 +20,7 @@ logger = logging.getLogger("twitchio.http")
 logger.setLevel(logging.WARN)
 
 log = logging.getLogger('event_stream')
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
 
 #custom_id for channel points
 perfect_lurker_channel_id="a374b031-d275-4660-9755-9a9977e7f3ae"
@@ -804,6 +804,47 @@ class Bot_one(commands.Bot):
             print(lurker)
 
 
+    async def write_file(self, lurker:Lurker, lurker_gang: LurkerGang, drop_yellow_trap: DropBananaEvent,
+                          yellow_hit: HitBananaEvent, red_hit: HitRedShellEvent, drop_red_trap: DropRedShellEvent):
+        lurker_info = {}
+        for lurker.in_race in lurker_gang:
+            yellow_traps_used = 1 if lurker.in_race and isinstance(drop_yellow_trap, DropBananaEvent) else 0
+            red_traps_used = 1 if lurker.in_race and isinstance(drop_red_trap, DropRedShellEvent) else 0
+            self_hit_yellow = 1 if lurker == yellow_hit.attack_lurker.user_name and yellow_hit.hit_lurker.user_name else 0
+            self_hit_red = 1 if lurker == red_hit.attack_lurker.user_name and red_hit.hit_lurker.user_name else 0
+            who_hit_yellowtrap = yellow_hit.hit_lurker.user_name if yellow_hit.hit_lurker.user_name != lurker else None
+            times_rival_hit_yellowtrap =1 if who_hit_redtrap != None else 0
+            self_hit_red = 1 if lurker == red_hit.attack_lurker.user_name and red_hit.hit_lurker.user_name else 0
+            self_hit_red = 1 if lurker == red_hit.attack_lurker.user_name and red_hit.hit_lurker.user_name else 0
+            who_hit_redtrap = red_hit.hit_lurker.user_name if red_hit.hit_lurker.user_name != lurker else None
+            times_rival_hit_redtrap =1 if who_hit_redtrap != None else 0
+            who_set_bullyyellowtrap = yellow_hit.attack_lurker.user_name if yellow_hit.hit_lurker.user_name == lurker else None
+            who_set_bullyredtrap = red_hit.attack_lurker.user_name if red_hit.hit_lurker.user_name == lurker else None
+
+            #rival = person you are hitting 
+            #bully = who is hitting you
+
+            lurker_info.append({'user_name':lurker.user_name,
+                         'user_points': lurker.points,
+                         'user_time_in_race:':lurker.points*10,
+                         'yellow_traps_used': yellow_traps_used,
+                         'who_hit_yellowtrap':who_hit_yellowtrap,
+                         'times_rival_hit_yellowtrap':times_rival_hit_yellowtrap,
+                         'hit_own_yellowtrap': self_hit_yellow,
+                         'bully_trap_yellow' :who_set_bullyyellowtrap,
+                         'red_traps_used':red_traps_used,
+                         'hit_own_redtrap': self_hit_red,
+                         'red_traps_used': red_traps_used,
+                         'who_hit_redtrap':who_hit_redtrap,
+                         'times_rival_hit_redtrap':times_rival_hit_redtrap,
+                         'red_traps_used':red_traps_used,
+                         'bully_trap_red' :who_set_bullyredtrap,
+
+                         })
+            print(lurker_info)
+
+
+
     #last function
     async def run(self):
         topics = [
@@ -831,16 +872,21 @@ if __name__ == '__main__':
     bot = Bot_one(lurker_gang,event_stream)
     point_partial = functools.partial(point_timer,lurker_gang,event_stream)
     routines.routine(seconds=10)(point_partial).start()
-    # lurker_task_made = bot.loop.create_task(bot.run())
-    try:
-        lurker_task_made = bot.loop.create_task(bot.run())
-    except Exception as E:
-        response = refresh_access_token( CLIENT_ID , CLIENT_SECRET)
-        access_token = response[ 'access_token' ]
-        refresh_token = response[ 'refresh_token' ]
-        bot.token = USER_TOKEN
+    lurker_task_made = bot.loop.create_task(bot.run())
+    # try:
+    #     lurker_task_made = bot.loop.create_task(bot.run())
+    # except Exception as E:
+    #     response = refresh_access_token( CLIENT_ID , CLIENT_SECRET)
+    #     access_token = response[ 'access_token' ]
+    #     refresh_token = response[ 'refresh_token' ]
+    #     bot.token = USER_TOKEN
 
     godot_bot = ConsumerForGodot(event_stream)
+    while True:
+        task_for_botgodot = bot.loop.create_task(godot_bot.create_task())
+        gather_both_task = asyncio.gather(lurker_task_made, task_for_botgodot)
+        bot.loop.run_until_complete(gather_both_task)
+
     task_for_botgodot = bot.loop.create_task(godot_bot.create_task())
     gather_both_task = asyncio.gather(lurker_task_made, task_for_botgodot)
     bot.loop.run_until_complete(gather_both_task)   
