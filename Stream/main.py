@@ -1,5 +1,8 @@
 import pprint
 import random
+import pandas as pd
+from datetime import datetime
+import csv
 import requests
 import functools
 from collections.abc import Iterator, Awaitable
@@ -31,6 +34,7 @@ blue_chanel_point = '6faf803c-b051-4533-b86a-95a5955eace3'
 shield_chanel_point = '67313597-0928-46e8-97d3-f7241ec778ed'
 
 all_viewers ="All_Viewers.txt"
+current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 status_in_race = "in_race"
 "Lurker state indicating we are actively in the race"
@@ -49,13 +53,18 @@ class Event:
     def __repr__(self) -> str:
         return str(self.__dict__)
     
+    def dump(self) -> str:
+        pass
+
+    
 _E = TypeVar("_E", bound=Event)
 TypedConsumerDelegate = Tuple[_E, Callable[[_E], Awaitable[None]]]
 """
 Kinda magic type of storing a list of consumers based on what subclassed event
 they are listening for.
 """
-    
+
+
 class EventStream:
     """
     EventStream allows producers of events to add events, and for consumers of the events
@@ -68,6 +77,7 @@ class EventStream:
         """
         Create a new event stream that stores our consumers and will route events to them.
         """
+    
 
         self._consumers: List[TypedConsumerDelegate[Event]] = []
 
@@ -101,6 +111,8 @@ class EventStream:
         for con in self._consumers:
             if isinstance(ev, con[0]):  # type: ignore
                 await con[1](ev)
+                
+    
 
     """ This is a delay function that will be uses to make Red shells and Blue Shell delay after the 
 hit_lurkers are identified in the lurker_gang"""
@@ -348,6 +360,14 @@ class DropRedShellEvent(SocketEvent):
         self.attack_lurker = attack_lurker
         "Lurker who sent redshell, maybe by the same as hit_lurker"
 
+     #this is how we get the dump to retun to the json.
+    def dump(self) -> str:
+        return json.dumps({
+            "type": "6_Attack_Drop_Red_Trap",
+            "timestamp": current_time,
+            "attacking_drop_red__lurker":self.attack_lurker
+        })
+
 class HitRedShellEvent(SocketEvent):
     def __init__(self,hit_lurker: "Lurker", attack_lurker: "Lurker"):
         super().__init__(
@@ -357,7 +377,16 @@ class HitRedShellEvent(SocketEvent):
         "Lurker who got hit by the redshell"
         self.attack_lurker = attack_lurker
         "Lurker who sent redshell, maybe by the same as hit_lurker"
-
+    
+    #this is how we get the dump to retun to the json.
+    def dump(self) -> str:
+        return json.dumps({
+            "type": "7_Hit_Red_Trap",
+            "timestamp": current_time,
+            "hit_red_lurker": self.hit_lurker,
+            "attacking_red__lurker":self.attack_lurker
+        })
+    
 class LurkerGang:
     """
     Track our lurkers in a single collection.
@@ -507,7 +536,13 @@ class JoinedRaceEvent(SocketEvent):
         super().__init__(1, [lurker.user_name,lurker.image_url])
         self.lurker = lurker
         "Lurker who joined the race"
-
+        #this is how we get the dump to retun to the json.
+    def dump(self) -> str:
+        return json.dumps({
+            "type": "1_JoinRace",
+            "timestamp": current_time,
+            "lurker": self.lurker.user_name
+        })
 
 class LeftRaceEvent(SocketEvent):
     """
@@ -519,6 +554,14 @@ class LeftRaceEvent(SocketEvent):
         self.lurker = lurker
         "Lurker who joined the race"
 
+        #this is how we get the dump to retun to the json.
+    def dump(self) -> str:
+        return json.dumps({
+            "type": "SetPointsEvent",
+            "timestamp": current_time,
+            "lurker": self.lurker.user_name
+        })
+            
 
 class SetPointsEvent(SocketEvent):
     """
@@ -532,6 +575,16 @@ class SetPointsEvent(SocketEvent):
         self.points = points
         "Current points of our lurker"
 
+        #this is how we get the dump to retun to the json.
+    def dump(self) -> str:
+        return json.dumps({
+            "type": "SetPointsEvent",
+            "timestamp": current_time,
+            "lurker": self.lurker.user_name,
+            "points": self.points,
+        })
+            
+
 class DropBananaEvent(SocketEvent):
     def __init__(self, lurker: "Lurker"):
         one_position_back = (lurker.position + 59) % 60
@@ -541,6 +594,14 @@ class DropBananaEvent(SocketEvent):
         self.position = one_position_back
         "Where the banana was dropped on the field"
 
+        #this is how we get the dump to retun to the json.
+    def dump(self) -> str:
+        return json.dumps({
+            "type": "4_Drop_Yellow_Trap",
+            "timestamp": current_time,
+            "lurker": self.lurker.user_name,
+            "position": self.position,
+        })
 
 class HitBananaEvent(SocketEvent):
     def __init__(self, position: int, hit_lurker: "Lurker", attack_lurker: "Lurker"):
@@ -554,6 +615,15 @@ class HitBananaEvent(SocketEvent):
         self.position = position
         "Where the banana was dropped on the field"
 
+        #this is how we get the dump to retun to the json.
+    def dump(self) -> str:
+        return json.dumps({
+            "type": "5_Hit_Yellow_Trap",
+            "timestamp": current_time,
+            "hit_yellow_lurker": self.hit_lurker,
+            "attacking_yellow_lurker": self.attack_lurker,
+            "position": self.position,
+        })
 class Field:
     """
     Field manages any race wide events such as items dropped.
@@ -681,7 +751,16 @@ class ConsumerForGodot():
 
    # run forever
         
-    
+# async def get_all_consumers(event_stream: EventStream, event: Event):
+#     for event in event_stream:
+#         event = []
+#         with open ('lurker_race_info.csv', mode='a', newline='') as file:
+
+#used to gather the event stream ddump of all events 
+async def event_sink(ev: Event):
+    with open("lurker_racer_info", "a") as f:
+        json.dump(ev.dump(), f)
+
 
 
 class Bot_one(commands.Bot):
@@ -806,7 +885,9 @@ class Bot_one(commands.Bot):
 
     async def write_file(self, lurker:Lurker, lurker_gang: LurkerGang, drop_yellow_trap: DropBananaEvent,
                           yellow_hit: HitBananaEvent, red_hit: HitRedShellEvent, drop_red_trap: DropRedShellEvent):
-        lurker_info = {}
+        lurker_info = []
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
         for lurker.in_race in lurker_gang:
             yellow_traps_used = 1 if lurker.in_race and isinstance(drop_yellow_trap, DropBananaEvent) else 0
             red_traps_used = 1 if lurker.in_race and isinstance(drop_red_trap, DropRedShellEvent) else 0
@@ -824,7 +905,7 @@ class Bot_one(commands.Bot):
             #rival = person you are hitting 
             #bully = who is hitting you
 
-            lurker_info.append({'user_name':lurker.user_name,
+            lurker_race_data = {'user_name':lurker.user_name,
                          'user_points': lurker.points,
                          'user_time_in_race:':lurker.points*10,
                          'yellow_traps_used': yellow_traps_used,
@@ -839,8 +920,33 @@ class Bot_one(commands.Bot):
                          'times_rival_hit_redtrap':times_rival_hit_redtrap,
                          'red_traps_used':red_traps_used,
                          'bully_trap_red' :who_set_bullyredtrap,
+                         'time_stamp': current_time
+                         }
+            lurker_info.append(lurker_race_data)
+            # Write data to CSV file
+            file_exists = False
+            try:
+                with open('lurkers_running_list.csv', mode='r', newline='') as file:
+                    if len(file.readline()) > 0:  # Check if the file is not empty
+                        file_exists = True
+            except FileNotFoundError:
+                pass
 
-                         })
+            #append the write file
+            with open ('lurkers_running_list.csv',mode='w', newline='') as file:
+                headers = ['user_points', 'user_time_in_race:', 'yellow_traps_used',
+                            'who_hit_yellowtrap', 'times_rival_hit_yellowtrap', 'hit_own_yellowtrap', 
+                            'bully_trap_yellow', 'red_traps_used', 'hit_own_redtrap', 'red_traps_used',
+                            'who_hit_redtrap', 'times_rival_hit_redtrap', 'red_traps_used', 
+                            'bully_trap_red', 'time_stamp']
+                writer = csv.DictWriter(file, fieldnames=headers)
+
+                if not file_exists:  # Write headers only if the file is empty
+                    writer.writeheader()
+
+                for data in lurker_info:
+                    writer.writerow(data)
+
             print(lurker_info)
 
 
@@ -872,6 +978,7 @@ if __name__ == '__main__':
     bot = Bot_one(lurker_gang,event_stream)
     point_partial = functools.partial(point_timer,lurker_gang,event_stream)
     routines.routine(seconds=10)(point_partial).start()
+    event_stream.add_consumer(event_sink)
     lurker_task_made = bot.loop.create_task(bot.run())
     # try:
     #     lurker_task_made = bot.loop.create_task(bot.run())

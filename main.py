@@ -1,5 +1,6 @@
 import pprint
 import random
+from datetime import datetime
 import requests
 import functools
 from collections.abc import Iterator, Awaitable
@@ -34,6 +35,7 @@ blue_chanel_point = '6faf803c-b051-4533-b86a-95a5955eace3'
 shield_chanel_point = '67313597-0928-46e8-97d3-f7241ec778ed'
 
 all_viewers ="All_Viewers.txt"
+current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 status_in_race = "in_race"
 "Lurker state indicating we are actively in the race"
@@ -52,6 +54,9 @@ class Event:
     def __repr__(self) -> str:
         return str(self.__dict__)
     
+    def dump(self) -> str:
+        pass
+
 _E = TypeVar("_E", bound=Event)
 TypedConsumerDelegate = Tuple[_E, Callable[[_E], Awaitable[None]]]
 """
@@ -350,6 +355,14 @@ class DropRedShellEvent(SocketEvent):
         )
         self.attack_lurker = attack_lurker
         "Lurker who sent redshell, maybe by the same as hit_lurker"
+    #this is how we get the dump to retun to the json.
+    def dump(self) -> str:
+        return json.dumps({
+            "type": "6_Attack_Drop_Red_Trap",
+            "timestamp": current_time,
+            "attacking_drop_red__lurker":self.attack_lurker
+        })
+
 
 class HitRedShellEvent(SocketEvent):
     def __init__(self,hit_lurker: "Lurker", attack_lurker: "Lurker"):
@@ -360,7 +373,15 @@ class HitRedShellEvent(SocketEvent):
         "Lurker who got hit by the redshell"
         self.attack_lurker = attack_lurker
         "Lurker who sent redshell, maybe by the same as hit_lurker"
-
+    #this is how we get the dump to retun to the json.
+    def dump(self) -> str:
+        return json.dumps({
+            "type": "7_Hit_Red_Trap",
+            "timestamp": current_time,
+            "hit_red_lurker": self.hit_lurker,
+            "attacking_red__lurker":self.attack_lurker
+        })
+    
 class LurkerGang:
     """
     Track our lurkers in a single collection.
@@ -511,6 +532,13 @@ class JoinedRaceEvent(SocketEvent):
         self.lurker = lurker
         "Lurker who joined the race"
 
+    #this is how we get the dump to retun to the json.
+    def dump(self) -> str:
+        return json.dumps({
+            "type": "1_JoinRace",
+            "timestamp": current_time,
+            "lurker": self.lurker.user_name
+        })
 
 class LeftRaceEvent(SocketEvent):
     """
@@ -522,6 +550,13 @@ class LeftRaceEvent(SocketEvent):
         self.lurker = lurker
         "Lurker who joined the race"
 
+        #this is how we get the dump to retun to the json.
+    def dump(self) -> str:
+        return json.dumps({
+            "type": "2_left_Race",
+            "timestamp": current_time,
+            "lurker": self.lurker.user_name
+        })
 
 class SetPointsEvent(SocketEvent):
     """
@@ -535,6 +570,16 @@ class SetPointsEvent(SocketEvent):
         self.points = points
         "Current points of our lurker"
 
+        #this is how we get the dump to retun to the json.
+    def dump(self) -> str:
+        return json.dumps({
+            "type": "SetPointsEvent",
+            "timestamp": current_time,
+            "lurker": self.lurker.user_name,
+            "points": self.points,
+        })
+            
+
 class DropBananaEvent(SocketEvent):
     def __init__(self, lurker: "Lurker"):
         one_position_back = (lurker.position + 59) % 60
@@ -543,6 +588,16 @@ class DropBananaEvent(SocketEvent):
         "Lurker who joined the race"
         self.position = one_position_back
         "Where the banana was dropped on the field"
+
+    #this is how we get the dump to retun to the json.
+    def dump(self) -> str:
+        return json.dumps({
+            "type": "4_Drop_Yellow_Trap",
+            "timestamp": current_time,
+            "lurker": self.lurker.user_name,
+            "position": self.position,
+        })
+
 
 
 class HitBananaEvent(SocketEvent):
@@ -557,6 +612,16 @@ class HitBananaEvent(SocketEvent):
         self.position = position
         "Where the banana was dropped on the field"
 
+       #this is how we get the dump to retun to the json.
+    def dump(self) -> str:
+        return json.dumps({
+            "type": "5_Hit_Yellow_Trap",
+            "timestamp": current_time,
+            "hit_yellow_lurker": self.hit_lurker,
+            "attacking_yellow_lurker": self.attack_lurker,
+            "position": self.position,
+        })
+    
 class Field:
     """
     Field manages any race wide events such as items dropped.
@@ -665,6 +730,11 @@ class Field:
         if ev.position not in self._bananas:
             self._bananas[ev.position] = []
         self._bananas[ev.position].append(ev.lurker)
+
+#this is for gathering the stream dumps you need to put one in every class
+async def event_sink(ev: Event):
+    with open("lurker_racer_info", "a") as f:
+        json.dump(ev.dump(), f)
 
 class ConsumerForGodot():
     def __init__(self, event_stream:EventStream):
@@ -873,21 +943,13 @@ if __name__ == '__main__':
     bot = Bot_one(lurker_gang,event_stream)
     point_partial = functools.partial(point_timer,lurker_gang,event_stream)
     routines.routine(seconds=10)(point_partial).start()
+    event_stream.add_consumer(event_sink)
     lurker_task_made = bot.loop.create_task(bot.run())
-    # try:
-    #     lurker_task_made = bot.loop.create_task(bot.run())
-    # except Exception as E:
-    #     response = refresh_access_token( CLIENT_ID , CLIENT_SECRET)
-    #     access_token = response[ 'access_token' ]
-    #     refresh_token = response[ 'refresh_token' ]
-    #     bot.token = USER_TOKEN
-
     godot_bot = ConsumerForGodot(event_stream)
     while True:
         task_for_botgodot = bot.loop.create_task(godot_bot.create_task())
         gather_both_task = asyncio.gather(lurker_task_made, task_for_botgodot)
         bot.loop.run_until_complete(gather_both_task)
-
     task_for_botgodot = bot.loop.create_task(godot_bot.create_task())
     gather_both_task = asyncio.gather(lurker_task_made, task_for_botgodot)
     bot.loop.run_until_complete(gather_both_task)   
