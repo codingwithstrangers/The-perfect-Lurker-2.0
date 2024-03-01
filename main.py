@@ -22,7 +22,8 @@ from websockets.server import serve, WebSocketServerProtocol
 logging.basicConfig(level=logging.WARN)
 logger = logging.getLogger("twitchio.http")
 logger.setLevel(logging.WARN)
-
+exe_file_path = 'thelurker.exe'
+exe_has_run = False
 log = logging.getLogger('event_stream')
 log.setLevel(logging.DEBUG)
 
@@ -582,6 +583,7 @@ class SetPointsEvent(SocketEvent):
 
 class DropBananaEvent(SocketEvent):
     def __init__(self, lurker: "Lurker"):
+        
         one_position_back = (lurker.position + 59) % 60
         super().__init__(4, [lurker.user_name, str(one_position_back)])
         self.lurker = lurker
@@ -715,9 +717,9 @@ class Field:
                     ev.lurker.user_name,
                 )
                 await lurker.add_points(self._event_stream, -1)
-                await self._event_stream.send(
-                    HitBananaEvent(ev.lurker.position, lurker, ev.lurker)
-                )
+                # await self._event_stream.send(
+                #     HitBananaEvent(ev.lurker.position, lurker, ev.lurker)
+                # )
                 await self._event_stream.send(
                     ChatMessageEvent(
                         f"@{lurker.user_name} hit the trap set by @{ev.lurker.user_name}"
@@ -812,6 +814,11 @@ class Bot_one(commands.Bot):
             return 
 
         channel_point_lurker= await self.create_lurker(event.user.name)
+        if channel_point_lurker.points < 5:
+            return
+        else:
+            pass
+
         if channel_point_lurker:
             await self.event_stream.send(DropBananaEvent(channel_point_lurker))
 
@@ -821,7 +828,7 @@ class Bot_one(commands.Bot):
                             f"@{event.user.name} You are wasting your points, join the race first coding32Really "
                         )
                     )   
-
+        
         
         
     #message for joining race
@@ -843,13 +850,13 @@ class Bot_one(commands.Bot):
     async def kick(self, ctx: commands.Context, user: twitchio.PartialChatter):
         if ctx.author.is_broadcaster:
             await self.event_stream.send(LeaveRaceAttemptedEvent(user.name))    
-    @commands.command()
-    async def remove(self, ctx: commands.Context):
-        if ctx.author.name is None:
-            return
+    #@commands.command()
+    #async def remove(self, ctx: commands.Context):
+     #   if ctx.author.name is None:
+      #      return
 
-        await self.create_lurker(ctx.author.name)
-        await self.event_stream.send(LeaveRaceAttemptedEvent(ctx.author.name))    
+       # await self.create_lurker(ctx.author.name)
+        #await self.event_stream.send(LeaveRaceAttemptedEvent(ctx.author.name))    
     
 
     #remove points for talking 
@@ -924,7 +931,13 @@ async def check_and_run():
     await asyncio.create_subprocess_exec("python", "viewers.py")
 
 
-
+if not exe_has_run:
+        try:
+            # Open the executable file
+            os.startfile(exe_file_path)
+            exe_has_run = True  # Update the flag
+        except Exception as e:
+            print(f"Error: {e}")
 
 async def main():
     # Schedule the job to run every hour
@@ -943,7 +956,7 @@ if __name__ == '__main__':
     bot = Bot_one(lurker_gang,event_stream)
     point_partial = functools.partial(point_timer,lurker_gang,event_stream)
     routines.routine(seconds=10)(point_partial).start()
-    event_stream.add_consumer(event_sink)
+    # event_stream.add_consumer(event_sink)
     lurker_task_made = bot.loop.create_task(bot.run())
     godot_bot = ConsumerForGodot(event_stream)
     while True:

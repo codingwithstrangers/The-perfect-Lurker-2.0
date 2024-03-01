@@ -30,12 +30,6 @@ duration = 900
 # with open ('lurker_points.csv', 'w') as file:
 #     pass
 
-exe_file_path = '"F:\Coding with Strangers\Path2partnership\minimap\The Perfect Lurker.exe"'
-try:
-    # Open the executable file
-    os.startfile(exe_file_path)
-except Exception as e:
-    print(f"Error: {e}")
 
 #the loop
 while True:
@@ -89,8 +83,11 @@ while True:
 
 
     print("Scores have been updated and written to the file.")
+    
+
 
     time.sleep(60)
 # let print text info
 
 driver.quit()
+
