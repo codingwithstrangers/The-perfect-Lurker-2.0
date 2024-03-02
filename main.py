@@ -11,6 +11,7 @@ import twitchio
 from configuration import *
 import logging
 import asyncio
+import csv
 import psutil
 import subprocess
 import schedule
@@ -36,7 +37,9 @@ blue_chanel_point = '6faf803c-b051-4533-b86a-95a5955eace3'
 shield_chanel_point = '67313597-0928-46e8-97d3-f7241ec778ed'
 
 all_viewers ="All_Viewers.txt"
-current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+def current_time():  
+   current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+   return current_time
 
 status_in_race = "in_race"
 "Lurker state indicating we are actively in the race"
@@ -45,6 +48,21 @@ status_out_race = "out_race"
 status_removed_race = "left_race"
 "Lurker state indicating we have left the race, and can not re-enter"
 
+
+# Function to convert JSONL to CSV without modifications
+def jsonl_to_csv(jsonl_filename, csv_filename):
+    with open(jsonl_filename, 'r') as jsonl_file, open(csv_filename, 'a', newline='') as csv_file:
+        writer = csv.writer(csv_file)
+        for line in jsonl_file:
+            data = json.loads(line.strip())
+            writer.writerow(data.values())  # Write only values
+
+# Example usage to convert JSONL to CSV without modifications
+jsonl_to_csv("lurker_racer_info.jsonl", "final_lurker.csv")
+
+# Open the file in write mode ("w") to clear its contents
+with open("lurker_racer_info.jsonl", "w") as clear_file:
+    pass  # This does nothing, but ensures the file is cleared
 
 #Class for Stream producer and consumers
 class Event:
@@ -55,7 +73,7 @@ class Event:
     def __repr__(self) -> str:
         return str(self.__dict__)
     
-    def dump(self) -> str:
+    def dump(self) -> str | None:
         pass
 
 _E = TypeVar("_E", bound=Event)
@@ -294,18 +312,26 @@ class LurkerEvent(Event):
             and isinstance(other, LurkerEvent)
             and self.user_name == other.user_name
         )
-
+    
+    def dump(self) -> str:
+        return json.dumps({
+            **self.__dict__,**{
+            "type": self.__class__.__name__,
+            "timestamp": current_time(),
+            },
+            })
 class JoinRaceAttemptedEvent(LurkerEvent):
     """
     Event used when a chatter attempts to join the race
     """
 
 class TalkingLurkerEvent(LurkerEvent):
+
     ''''
     Ayo  (lol) this is the event used to send an event of 
     a talking lurker
     '''
-
+    
 class TalkingChannelPointEvent(LurkerEvent):
     '''This is the event to sent a notice of a lurker talking_lurker_id
     butt they are using a channel point'''
@@ -355,13 +381,15 @@ class DropRedShellEvent(SocketEvent):
             6, [ attack_lurker.user_name, str(attack_lurker.points), hit_lurker.user_name, str(hit_lurker.points),str(red_delay)]
         )
         self.attack_lurker = attack_lurker
+        self.hit_lurker = hit_lurker
         "Lurker who sent redshell, maybe by the same as hit_lurker"
     #this is how we get the dump to retun to the json.
     def dump(self) -> str:
         return json.dumps({
             "type": "6_Attack_Drop_Red_Trap",
-            "timestamp": current_time,
-            "attacking_drop_red__lurker":self.attack_lurker
+            "timestamp": current_time(),
+            "attacking_drop_red__lurker":self.attack_lurker.user_name,
+            "hit_lurker": self.hit_lurker.user_name, 
         })
 
 
@@ -378,11 +406,21 @@ class HitRedShellEvent(SocketEvent):
     def dump(self) -> str:
         return json.dumps({
             "type": "7_Hit_Red_Trap",
-            "timestamp": current_time,
-            "hit_red_lurker": self.hit_lurker,
-            "attacking_red__lurker":self.attack_lurker
+            "timestamp": current_time(),
+            "hit_red_lurker": self.hit_lurker.user_name,
+            "attacking_red__lurker":self.attack_lurker.user_name,
         })
-    
+
+#making the suffix for the place
+def suffix_place(place:int):
+    #if the place is 1,2,3 they will have th.
+
+    match place:
+        case 1: return "st you couldn't help but rub it in? "
+        case 2: return "nd"
+        case 3: return "rd"
+        case _: return "th"
+
 class LurkerGang:
     """
     Track our lurkers in a single collection.
@@ -444,11 +482,23 @@ class LurkerGang:
             return
         await lurk.add_points(self._event_stream,-1)
 
+   
     async def _on_leave_attempt(self, ev: LeaveRaceAttemptedEvent):
         lurk = self[ev.user_name]
         if not lurk:
             return
         await lurk.leave_race(self._event_stream)
+
+    #this is how we calculate the place of the lurker in the race    
+    def lurker_place(self, lurker_place: Lurker):
+        return len(list(lurker for lurker in self if lurker.points > lurker_place.points))+1
+        
+    #figure out the lurkers name from position
+    def ranking_lurker(self):
+        # sort the lurker by points hi to low
+        # retrun hi 3 lurkers
+        return sorted(self, key=lambda l:l.points,reverse=True)[:3]
+
 
 
     #the test for TDD we want this match up with the right with the least amount of code
@@ -537,7 +587,7 @@ class JoinedRaceEvent(SocketEvent):
     def dump(self) -> str:
         return json.dumps({
             "type": "1_JoinRace",
-            "timestamp": current_time,
+            "timestamp": current_time(),
             "lurker": self.lurker.user_name
         })
 
@@ -555,7 +605,7 @@ class LeftRaceEvent(SocketEvent):
     def dump(self) -> str:
         return json.dumps({
             "type": "2_left_Race",
-            "timestamp": current_time,
+            "timestamp": current_time(),
             "lurker": self.lurker.user_name
         })
 
@@ -575,7 +625,7 @@ class SetPointsEvent(SocketEvent):
     def dump(self) -> str:
         return json.dumps({
             "type": "SetPointsEvent",
-            "timestamp": current_time,
+            "timestamp": current_time(),
             "lurker": self.lurker.user_name,
             "points": self.points,
         })
@@ -595,7 +645,7 @@ class DropBananaEvent(SocketEvent):
     def dump(self) -> str:
         return json.dumps({
             "type": "4_Drop_Yellow_Trap",
-            "timestamp": current_time,
+            "timestamp": current_time(),
             "lurker": self.lurker.user_name,
             "position": self.position,
         })
@@ -618,9 +668,9 @@ class HitBananaEvent(SocketEvent):
     def dump(self) -> str:
         return json.dumps({
             "type": "5_Hit_Yellow_Trap",
-            "timestamp": current_time,
-            "hit_yellow_lurker": self.hit_lurker,
-            "attacking_yellow_lurker": self.attack_lurker,
+            "timestamp": current_time(),
+            "hit_yellow_lurker": self.hit_lurker.user_name,
+            "attacking_yellow_lurker": self.attack_lurker.user_name,
             "position": self.position,
         })
     
@@ -735,9 +785,12 @@ class Field:
 
 #this is for gathering the stream dumps you need to put one in every class
 async def event_sink(ev: Event):
-    with open("lurker_racer_info", "a") as f:
-        json.dump(ev.dump(), f)
+    event_dump= ev.dump()
+    if event_dump: 
+        with open("lurker_racer_info.jsonl", "a") as f:
+            f.write(event_dump+"\n")
 
+# Keeps bot runnning 
 class ConsumerForGodot():
     def __init__(self, event_stream:EventStream):
         event_stream.add_consumer(self.consume_godot_events)
@@ -755,9 +808,6 @@ class ConsumerForGodot():
         await self.websocket.send(event.packet())
 
    # run forever
-        
-    
-
 
 class Bot_one(commands.Bot):
     def __init__(self,lurker_gang: LurkerGang, event_stream:EventStream):
@@ -875,13 +925,46 @@ class Bot_one(commands.Bot):
         # self.message_queue.append(f'{setting_lurker_points},{talking_lurker.user_name},{talking_lurker.points}')
         # await self.check_yellow_items()
 
+    @commands.command()
+    async def ranked(self, ctx: commands.Context):
+        top_lurkers = self.lurker_gang.ranking_lurker()  # Get top 3 lurkers using the ranking_lurker function
+
+        for i, lurker in enumerate(top_lurkers, start=1):
+            filename = f"{i}st_place.txt" if i == 1 else f"{i}nd_place.txt" if i == 2 else f"{i}rd_place.txt"
+            with open(filename, "w") as file:
+                file.write(f"{lurker.user_name}\n")  # Assuming 'user_name' is the attribute containing the lurker's name
+
+        if not top_lurkers:  # If there are no top lurkers
+            for i in range(1, 4):  # Create empty files for 1st, 2nd, and 3rd place
+                filename = f"{i}st_place.txt" if i == 1 else f"{i}nd_place.txt" if i == 2 else f"{i}rd_place.txt"
+                with open(filename, "w") as file:
+                    file.write("no racer\n")
+
+    # @commands.command()
+    # async def ranked(self, ctx: commands.Context):
+    #     top_lurkers =self.lurker_gang.ranking_lurker()  # Get top 3 lurkers using the ranking_lurker function
+    #     if ctx.author.name != "codingwithstrangers":
+    #         for i, lurker in enumerate(top_lurkers, start=1):
+    #             filename = f"{i}st_place.txt" if i == 1 else f"{i}nd_place.txt" if i == 2 else f"{i}rd_place.txt"
+    #             with open(filename, "a") as file:
+    #                 file.write(f"{lurker.user_name}\n")  # Assuming 'name' is the attribute containing the lurker's name
 
     @commands.command()
-    async def points(self, ctx: commands.Context):
-        if ctx.author.name != "codingwithstrangers":
-            return 
-        for lurker in self.lurker_gang:
-            print(lurker)
+    #tell racer what place they are in
+    async def place(self, ctx:commands.Context):
+        lurker_await = await self.create_lurker(ctx.author.name)
+        if lurker_await.in_race:
+            lurker_place = self.lurker_gang.lurker_place(lurker_await)       
+            await self.event_stream.send(
+                    ChatMessageEvent(
+                        f"@{ctx.author.name} you are in {lurker_place}{suffix_place(lurker_place)}"
+                    ))
+        else:
+            await self.event_stream.send(
+                    ChatMessageEvent(
+                        f"@{ctx.author.name} you are not in the race Lil Bro"
+                    ))
+
 
 
     #last function
@@ -956,7 +1039,8 @@ if __name__ == '__main__':
     bot = Bot_one(lurker_gang,event_stream)
     point_partial = functools.partial(point_timer,lurker_gang,event_stream)
     routines.routine(seconds=10)(point_partial).start()
-    # event_stream.add_consumer(event_sink)
+    event_stream.add_consumer(event_sink)
+    jsonl_to_csv("lurker_racer_info.jsonl", "final_lurker.csv")
     lurker_task_made = bot.loop.create_task(bot.run())
     godot_bot = ConsumerForGodot(event_stream)
     while True:
