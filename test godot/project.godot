@@ -12,12 +12,17 @@ config_version=5
 
 config/name="Test Godot"
 run/main_scene="res://node_2d.tscn"
-config/features=PackedStringArray("4.1", "Forward Plus")
+run/disable_stdout=true
+run/disable_stderr=true
+config/features=PackedStringArray("4.0", "Forward Plus")
+run/max_fps=24
+run/low_processor_mode=true
 config/icon="res://icon.svg"
 
 [display]
 
-window/size/viewport_height=1003
+window/size/viewport_width=831
+window/size/viewport_height=502
 
 [dotnet]
 

@@ -382,7 +382,9 @@ class DropRedShellEvent(SocketEvent):
         )
         self.attack_lurker = attack_lurker
         self.hit_lurker = hit_lurker
-        "Lurker who sent redshell, maybe by the same as hit_lurker"
+        "Lurker who sent redshell, maybe hit by the same as hit_lurker"
+    
+        
     #this is how we get the dump to retun to the json.
     def dump(self) -> str:
         return json.dumps({
@@ -811,7 +813,7 @@ class ConsumerForGodot():
 
 class Bot_one(commands.Bot):
     def __init__(self,lurker_gang: LurkerGang, event_stream:EventStream):
-        super().__init__(client_secret=CLIENT_SECRET, token= USER_TOKEN , prefix='!', initial_channels=['codingwithstrangers'],
+        super().__init__(client_secret=CLIENT_SECRET, token= USER_TOKEN , prefix='!', client_id= CLIENT_ID, initial_channels=['codingwithstrangers'],
             nick = "Perfect_Lurker",)
         
         event_stream.add_consumer(self.consume_chat_message)
