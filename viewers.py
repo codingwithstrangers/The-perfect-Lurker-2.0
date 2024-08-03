@@ -50,7 +50,7 @@ while True:
     )
 
     button.click()
-    users = WebDriverWait(driver, 30).until(
+    users = WebDriverWait(driver, 60).until(
         EC.presence_of_all_elements_located((By.XPATH, '//*[@id="root"]/div/div[1]/div/div/section/div/div[6]/section/div/div[2]/div[2]/div[3]/div/div/div[4]/div[2]'))
     )
     #sets up list to get and store vip viewers and mods

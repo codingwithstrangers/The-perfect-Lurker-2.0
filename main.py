@@ -813,7 +813,7 @@ class ConsumerForGodot():
 
 class Bot_one(commands.Bot):
     def __init__(self,lurker_gang: LurkerGang, event_stream:EventStream):
-        super().__init__(client_secret=CLIENT_SECRET, token= USER_TOKEN , client_id= CLIENT_ID, prefix='!', initial_channels=['codingwithstrangers'],
+        super().__init__(client_secret=CLIENT_SECRET, token= USER_AUTH_TOKEN , client_id= CLIENT_ID, prefix='!', initial_channels=['codingwithstrangers'],
             nick = "Perfect_Lurker")
         
         event_stream.add_consumer(self.consume_chat_message)
