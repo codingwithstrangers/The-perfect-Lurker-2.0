@@ -2,6 +2,11 @@
   <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNjAyMXphYmdkeWhsZjdzNWIyMjg0MGt5N3Rxd3dvZnFjZ2NuZXExMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/jvOHlU7qhcnsEGuTQZ/giphy.gif" width="150"/>
 </div>
 
+<p align="center">
+  <img src="https://i.imgur.com/1VBAB4H.jpg" alt="Image Description" width="600"/>
+</p>
+
+
 ### The Perfect Lurker
 
 I have two bots that run on my channel: one is called The Perfect Stranger, and this one is The Perfect Lurker. The Perfect Stranger gives people points based on their chat engagement. However, @profuctivetime and @xowilough (go follow them and tell them a stranger sent you) felt left out from my stream. They are known as lurkers on Twitch.
